@@ -16,7 +16,7 @@ This guide shows you how to configure, build, and run CryptoTraderAI in a Docker
 1. Clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/cboseb/CryptoTraderAI.git
+git clone https://github.com/cboseb/CryptoTraderAI.gitß
 cd CryptoTraderAI
 ```
 
@@ -47,5 +47,3 @@ The CryptoTraderAI webhook server will run in a Docker container on port 8000.
 ```
 http://your_server_ip_or_domain:8000/webhook
 ```
-
-Include the TradingView webhook secret in the alert message if you configured one in the `.env` file.
