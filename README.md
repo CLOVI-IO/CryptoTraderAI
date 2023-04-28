@@ -16,7 +16,7 @@ This guide shows you how to configure, build, and run CryptoTraderAI in a Docker
 1. Clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/cboseb/CryptoTraderAI.gitß
+git clone https://github.com/CLOVI-IO/CryptoTraderAI.gitß
 cd CryptoTraderAI
 ```
 
