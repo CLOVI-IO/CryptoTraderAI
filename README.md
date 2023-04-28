@@ -1,95 +1,51 @@
 # CryptoTraderAI
 
-CryptoTraderAI is a Python-based project that enables automated trading on the Crypto.com Exchange using trading signals from TradingView. The project listens for incoming webhook alerts from TradingView, processes the alert data, and executes the appropriate trading actions on the Crypto.com Exchange.
+CryptoTraderAI is a Python-based project that automates trading on the Crypto.com Exchange using TradingView signals. It listens for incoming webhook alerts from TradingView, processes the alert data, and executes appropriate trading actions on the Crypto.com Exchange.
+
+This guide shows you how to configure, build, and run CryptoTraderAI in a Docker container.
 
 ## Prerequisites
 
-Before you begin, ensure you have the following:
+- Docker installed on your machine (https://www.docker.com/)
+- TradingView account with configured alerts for your trading strategy
+- Crypto.com Exchange account with API access
+- Python 3.10 or higher
 
-- A TradingView account with configured alerts for your trading strategy.
-- A Crypto.com Exchange account with API access.
-- Python 3.6 or higher.
-- [Requests library](https://docs.python-requests.org/en/master/) for Python to handle HTTP requests.
+## Setup
 
-## Installation
-
-1. Clone the repository:
+1. Clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/your_username/CryptoTraderAI.git
-```
-
-2. Change to the project directory:
-
-```bash
+git clone https://github.com/cboseb/CryptoTraderAI.git
 cd CryptoTraderAI
 ```
 
-3. Install the required packages:
+2. Install the required Python packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Configuration
+3. Create a `.env` file with your Crypto.com Exchange API key, API secret, and TradingView webhook secret:
 
-1. Copy the `config.example.json` file to `config.json`.
+```ini
+CRYPTO_COM_API_KEY=YOUR_CRYPTO_COM_API_KEY
+CRYPTO_COM_API_SECRET=YOUR_CRYPTO_COM_API_SECRET
+TRADINGVIEW_WEBHOOK_SECRET=YOUR_TRADINGVIEW_WEBHOOK_SECRET
+```
+
+4. Build and run the Docker container:
 
 ```bash
-cp config.example.json config.json
+python run_docker.py
 ```
 
-2. Edit the `config.json` file and update it with your Crypto.com Exchange API key, API secret, and the TradingView webhook secret.
+The CryptoTraderAI webhook server will run in a Docker container on port 8000.
 
-```json
-{
-  "crypto_com": {
-    "api_key": "YOUR_CRYPTO_COM_API_KEY",
-    "api_secret": "YOUR_CRYPTO_COM_API_SECRET"
-  },
-  "tradingview": {
-    "webhook_secret": "YOUR_TRADINGVIEW_WEBHOOK_SECRET"
-  }
-}
-```
-
-## Running the Webhook Server
-
-1. Start the webhook server:
-
-```bash
-python webhook_server.py
-```
-
-By default, the server listens on port 8000. You can change the port by editing the `webhook_server.py` file.
-
-2. Configure your TradingView alerts to use the webhook URL pointing to your server. For example:
+5. Configure your TradingView alerts to use the webhook URL pointing to your server:
 
 ```
 http://your_server_ip_or_domain:8000/webhook
 ```
 
-Don't forget to include the TradingView webhook secret in the alert message if you configured one in the `config.json` file.
-
-## Testing
-
-You can test your webhook server by sending sample POST requests using a tool like [Postman](https://www.postman.com/) or [curl](https://curl.se/). Here's an example of a test payload:
-
-```json
-{
-  "action": "buy",
-  "symbol": "BTC_USDT",
-  "quantity": "0.001",
-  "webhook_secret": "YOUR_TRADINGVIEW_WEBHOOK_SECRET"
-}
-```
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
+Include the TradingView webhook secret in the alert message if you configured one in the `.env` file.
