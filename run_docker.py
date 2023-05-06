@@ -1,34 +1,45 @@
+from flask import Flask, request, jsonify
 import os
-import docker
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Get environment variables
-crypto_com_api_key = os.getenv("CRYPTO_COM_API_KEY")
-crypto_com_api_secret = os.getenv("CRYPTO_COM_API_SECRET")
-tradingview_webhook_secret = os.getenv("TRADINGVIEW_WEBHOOK_SECRET")
+app = Flask(__name__)
 
-# Initialize Docker client
-client = docker.from_env()
+# Read environment variables
+CRYPTO_COM_API_KEY = os.getenv("CRYPTO_COM_API_KEY")
+CRYPTO_COM_API_SECRET = os.getenv("CRYPTO_COM_API_SECRET")
+TRADINGVIEW_WEBHOOK_SECRET = os.getenv("TRADINGVIEW_WEBHOOK_SECRET")
 
-# Build Docker image
-print("Building Docker image...")
-image, _ = client.images.build(path=".", tag="cryptotraderai", rm=True)
-print("Docker image built successfully.")
 
-# Run Docker container
-print("Running Docker container...")
-container = client.containers.run(
-    image=image.id,
-    name="cryptotraderai",
-    ports={"8000/tcp": 8000},
-    environment={
-        "CRYPTO_COM_API_KEY": crypto_com_api_key,
-        "CRYPTO_COM_API_SECRET": crypto_com_api_secret,
-        "TRADINGVIEW_WEBHOOK_SECRET": tradingview_webhook_secret,
-    },
-    detach=True,
-)
-print(f"Docker container running. ID: {container.id}")
+# Helper function to process the received alert
+def process_alert(alert_data):
+    # Implement your logic to process the alert and perform trading actions
+    pass
+
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    # Validate webhook secret
+    webhook_secret = request.headers.get("X-Webhook-Secret")
+    if webhook_secret != TRADINGVIEW_WEBHOOK_SECRET:
+        return jsonify({"error": "Invalid webhook secret"}), 403
+
+    # Process the alert based on the Content-Type header
+    content_type = request.content_type
+    if content_type == "application/json":
+        alert_data = request.get_json()
+    elif content_type == "text/plain":
+        alert_data = request.data.decode("utf-8")
+    else:
+        return jsonify({"error": "Unsupported Media Type"}), 415
+
+    # Process the alert
+    process_alert(alert_data)
+
+    return jsonify({"message": "Webhook received and processed"}), 200
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
