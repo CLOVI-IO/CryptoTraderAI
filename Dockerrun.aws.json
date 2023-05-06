@@ -1,12 +1,12 @@
 {
   "AWSEBDockerrunVersion": "1",
   "Image": {
-    "Name": "cryptotraderai/crypto-trader-ai:latest",
+    "Name": "cryptotraderai/cryptotraderai",
     "Update": "true"
   },
   "Ports": [
     {
-      "ContainerPort": "8000"
+      "ContainerPort": "80"
     }
   ]
 }
