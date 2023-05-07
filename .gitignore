@@ -1,6 +1,8 @@
 .env
 logs/*
 .venv
+.vscode
+__pycache__
 
 # Compiled source #
 ###################
