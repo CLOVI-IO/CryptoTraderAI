@@ -19,10 +19,11 @@ redis_port = os.getenv("REDIS_PORT")
 redis_db = os.getenv("REDIS_DB")
 redis_password = os.getenv("REDIS_PASSWORD")
 
-# Initialize Redis client
+# Initialize Redis client and verify connection
 try:
     redis_client = redis.Redis(host=redis_host, port=int(redis_port), db=int(redis_db), password=redis_password)
-    print(f"Connected to Redis server at {redis_host}:{redis_port}")
+    if redis_client.ping():
+        print(f"Connected to Redis server at {redis_host}:{redis_port}")
 except Exception as e:
     print(f"Failed to connect to Redis server: {e}")
 
@@ -52,8 +53,9 @@ def view_signal():
         else:
             return {"signal": "No signal"}
     except Exception as e:
-        print(f"Failed to retrieve signal from Redis: {e}")
+        print(f"Failed to retrieve signal from Redis: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
