@@ -3,6 +3,7 @@ logs/*
 .venv
 .vscode
 __pycache__
+.envrc
 
 # Compiled source #
 ###################
