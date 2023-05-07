@@ -17,9 +17,6 @@ class Item(BaseModel):
     item_id: int
     q: Optional[str] = None
 
-# Initialize the last_signal as an empty dictionary
-last_signal = {}
-
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -29,21 +26,16 @@ def read_item(item_id: int, q: Optional[str] = None):
     return {"item_id": item_id, "q": q}
 
 @app.post("/webhook")
-async def webhook(request: Request):
-    # client_host = request.client.host
-    # if client_host not in TRADINGVIEW_IPS:
-    #     raise HTTPException(status_code=403, detail="Access denied")
-    
-    # Update the global variable with the new signal
-    global last_signal
-    last_signal = await request.json()
+def webhook(request: Request):
+    client_host = request.client.host
+    if client_host not in TRADINGVIEW_IPS:
+        raise HTTPException(status_code=403, detail="Access denied")
     return {"status": "ok"}
 
 @app.get("/viewsignal")
 def view_signal():
     # Here you would typically fetch the signal from your database or other data source
-    # Now it returns the last signal received
-    return last_signal
+    return {"signal": "No signal"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
