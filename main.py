@@ -17,6 +17,9 @@ class Item(BaseModel):
     item_id: int
     q: Optional[str] = None
 
+# Global variable to store the most recent signal
+last_signal = {"signal": "No signal"}
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -30,12 +33,16 @@ def webhook(request: Request):
     # client_host = request.client.host
     # if client_host not in TRADINGVIEW_IPS:
     #     raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Update the global variable with the new signal
+    global last_signal
+    last_signal = request.json()
     return {"status": "ok"}
 
 @app.get("/viewsignal")
 def view_signal():
-    # Here you would typically fetch the signal from your database or other data source
-    return {"signal": "No signal"}
+    # Return the most recent signal
+    return last_signal
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
