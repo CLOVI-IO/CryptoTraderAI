@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 import os
+import json
 
 # Load environment variables
 load_dotenv()
@@ -12,7 +13,7 @@ app = FastAPI()
 # List of allowed TradingView IPs
 TRADINGVIEW_IPS = ["52.89.214.238", "34.212.75.30", "54.218.53.128", "52.32.178.7"]
 
-# Initialize global variable for storing the last signal
+# Global variable to store the last signal
 last_signal = None
 
 @app.get("/")
@@ -20,14 +21,15 @@ def read_root():
     return {"Hello": "World"}
 
 @app.post("/webhook")
-def webhook(request: Request):
-    global last_signal
+async def webhook(request: Request):
     client_host = request.client.host
     if client_host not in TRADINGVIEW_IPS:
         raise HTTPException(status_code=403, detail="Access denied")
     # Store the signal in the global variable
     try:
-        last_signal = request.json()
+        global last_signal
+        last_signal = await request.json()
+        print(f"Received signal: {json.dumps(last_signal, indent=2)}")
         return {"status": "ok"}
     except Exception as e:
         print(f"Failed to store signal: {e}")
@@ -35,7 +37,6 @@ def webhook(request: Request):
 
 @app.get("/viewsignal")
 def view_signal():
-    global last_signal
     try:
         if last_signal:
             return {"signal": last_signal}
