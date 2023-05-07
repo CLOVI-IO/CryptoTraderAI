@@ -15,12 +15,7 @@ app = FastAPI()
 TRADINGVIEW_IPS = ["52.89.214.238", "34.212.75.30", "54.218.53.128", "52.32.178.7"]
 
 # Create a redis client
-redis_host = os.getenv("REDIS_HOST")
-redis_port = os.getenv("REDIS_PORT")
-redis_db = os.getenv("REDIS_DB")
-redis_password = os.getenv("REDIS_PASSWORD", None)  # This will be None if the password is not set
-
-redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password)
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 class Item(BaseModel):
     item_id: int
