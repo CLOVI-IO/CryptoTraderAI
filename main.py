@@ -11,7 +11,7 @@ load_dotenv()
 
 app = FastAPI()
 
-TRADINGVIEW_IPS = ["52.89.214.238", "34.212.75.30", "54.218.53.128", "52.32.178.7"]
+# TRADINGVIEW_IPS = ["52.89.214.238", "34.212.75.30", "54.218.53.128", "52.32.178.7"]
 
 class Item(BaseModel):
     item_id: int
@@ -27,9 +27,9 @@ def read_item(item_id: int, q: Optional[str] = None):
 
 @app.post("/webhook")
 def webhook(request: Request):
-    client_host = request.client.host
-    if client_host not in TRADINGVIEW_IPS:
-        raise HTTPException(status_code=403, detail="Access denied")
+    # client_host = request.client.host
+    # if client_host not in TRADINGVIEW_IPS:
+    #     raise HTTPException(status_code=403, detail="Access denied")
     return {"status": "ok"}
 
 @app.get("/viewsignal")
