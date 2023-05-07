@@ -14,17 +14,17 @@ app = FastAPI()
 
 TRADINGVIEW_IPS = ["52.89.214.238", "34.212.75.30", "54.218.53.128", "52.32.178.7"]
 
-# Create a redis client
-redis_host = os.getenv("REDIS_HOST")
-redis_port = os.getenv("REDIS_PORT")
-redis_db = os.getenv("REDIS_DB")
-redis_password = os.getenv("REDIS_PASSWORD", None)  # This will be None if the password is not set
-
-redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password)
-
 class Item(BaseModel):
     item_id: int
     q: Optional[str] = None
+
+# Initialize Redis client
+redis_host = os.getenv("REDIS_HOST")
+redis_port = os.getenv("REDIS_PORT")
+redis_db = os.getenv("REDIS_DB")
+redis_password = os.getenv("REDIS_PASSWORD")
+
+redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password)
 
 @app.get("/")
 def read_root():
@@ -45,9 +45,11 @@ def webhook(request: Request):
 
 @app.get("/viewsignal")
 def view_signal():
-    # Fetch the signal from Redis
     last_signal = redis_client.get('last_signal')
-    return {"signal": last_signal}
+    if last_signal:
+        return {"signal": last_signal.decode('utf-8')}
+    else:
+        return {"signal": "No signal"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
