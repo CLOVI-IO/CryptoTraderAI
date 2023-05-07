@@ -54,11 +54,16 @@ def webhook(request: Request):
 
 @app.get("/viewsignal")
 def view_signal():
-    last_signal = redis_client.get('last_signal')
-    if last_signal:
-        return {"signal": last_signal.decode('utf-8')}
-    else:
-        return {"signal": "No signal"}
+    try:
+        last_signal = redis_client.get('last_signal')
+        if last_signal:
+            return {"signal": last_signal.decode('utf-8')}
+        else:
+            return {"signal": "No signal"}
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
+
 
 if __name__ == "__main__":
     if test_redis_connection():
