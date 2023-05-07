@@ -63,14 +63,21 @@ def webhook(request: Request):
 @app.get("/viewsignal")
 def view_signal():
     try:
+        # Try to get the last signal from Redis
         last_signal = redis_client.get('last_signal')
-        if last_signal:
-            return {"signal": last_signal.decode('utf-8')}
+        if last_signal is None:
+            # If the key does not exist, return a custom error message
+            return {"detail": "No signal found in Redis"}
         else:
-            return {"signal": "No signal"}
+            # If the key exists, decode the value and return it
+            return {"signal": last_signal.decode('utf-8')}
+    except redis.exceptions.ConnectionError:
+        # If there's a connection error, return a custom error message
+        return {"detail": "Error connecting to Redis"}
     except Exception as e:
-        print(f"An error occurred while retrieving the signal: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
+        # If there's any other exception, return a custom error message
+        return {"detail": f"An unexpected error occurred: {str(e)}"}
+
 
 # Run the server if this script is run directly
 if __name__ == "__main__":
