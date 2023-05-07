@@ -1,17 +1,22 @@
+# Import necessary libraries
 from fastapi import FastAPI, Request, HTTPException
 from typing import Optional
 from pydantic import BaseModel
 import uvicorn
+from dotenv import load_dotenv
 import os
 import redis
-from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
+# Initialize FastAPI app
 app = FastAPI()
 
+# Define allowed IPs for TradingView
 TRADINGVIEW_IPS = ["52.89.214.238", "34.212.75.30", "54.218.53.128", "52.32.178.7"]
 
+# Define data model for items
 class Item(BaseModel):
     item_id: int
     q: Optional[str] = None
@@ -23,35 +28,38 @@ redis_db = os.getenv("REDIS_DB")
 redis_password = os.getenv("REDIS_PASSWORD")
 
 # Initialize Redis client
-redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password)
+try:
+    redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password)
+    print("Connected to Redis")
+except Exception as e:
+    print(f"Failed to connect to Redis: {e}")
 
-def test_redis_connection():
-    try:
-        # Ping the Redis server to test the connection
-        redis_client.ping()
-        print("Connected to Redis")
-        return True
-    except redis.ConnectionError:
-        print("Could not connect to Redis")
-        return False
-
+# Define root endpoint
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
+# Define item endpoint
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Optional[str] = None):
     return {"item_id": item_id, "q": q}
 
+# Define webhook endpoint for TradingView signals
 @app.post("/webhook")
 def webhook(request: Request):
     client_host = request.client.host
     if client_host not in TRADINGVIEW_IPS:
         raise HTTPException(status_code=403, detail="Access denied")
     # Store the signal in Redis
-    redis_client.set('last_signal', request.json())
+    try:
+        redis_client.set('last_signal', request.json())
+        print("Stored signal in Redis")
+    except Exception as e:
+        print(f"Failed to store signal in Redis: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while storing the signal")
     return {"status": "ok"}
 
+# Define endpoint to view the last signal
 @app.get("/viewsignal")
 def view_signal():
     try:
@@ -61,12 +69,9 @@ def view_signal():
         else:
             return {"signal": "No signal"}
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while retrieving the signal: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
 
-
+# Run the server if this script is run directly
 if __name__ == "__main__":
-    if test_redis_connection():
-        uvicorn.run(app, host="0.0.0.0", port=8000)
-    else:
-        print("Could not start the application because the Redis connection failed")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
