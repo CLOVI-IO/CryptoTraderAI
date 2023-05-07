@@ -1,5 +1,6 @@
 .env
 logs/*
+.venv
 
 # Compiled source #
 ###################
