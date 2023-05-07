@@ -52,4 +52,16 @@ def webhook(request: Request):
     redis_client.set('last_signal', request.json())
     return {"status": "ok"}
 
-@app.get("/viewsignal
+@app.get("/viewsignal")
+def view_signal():
+    last_signal = redis_client.get('last_signal')
+    if last_signal:
+        return {"signal": last_signal.decode('utf-8')}
+    else:
+        return {"signal": "No signal"}
+
+if __name__ == "__main__":
+    if test_redis_connection():
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    else:
+        print("Could not start the application because the Redis connection failed")
