@@ -1,49 +1,45 @@
-# CryptoTraderAI
+# CryptoTraderAI API
 
-CryptoTraderAI is a Python-based project that automates trading on the Crypto.com Exchange using TradingView signals. It listens for incoming webhook alerts from TradingView, processes the alert data, and executes appropriate trading actions on the Crypto.com Exchange.
+This repository contains the source code for the CryptoTraderAI API. The API is built with Python, using the FastAPI and Flask frameworks. It is designed to receive and process webhook alerts from TradingView.
 
-This guide shows you how to configure, build, and run CryptoTraderAI in a Docker container.
+## Features
 
-## Prerequisites
+- Receives POST requests from TradingView alerts.
+- Verifies that requests are coming from TradingView by checking the source IP address.
+- Stores the latest signal received from TradingView and makes it available via a GET request.
 
-- Docker installed on your machine (https://www.docker.com/)
-- TradingView account with configured alerts for your trading strategy
-- Crypto.com Exchange account with API access
-- Python 3.10 or higher
+## Installation
 
-## Setup
+1. Clone this repository to your local machine.
+2. Install the required Python packages by running `pip install -r requirements.txt` in your terminal.
 
-1. Clone the repository and navigate to the project directory:
+## Usage
 
-```bash
-git clone https://github.com/CLOVI-IO/CryptoTraderAI.gitß
-cd CryptoTraderAI
-```
-
-2. Install the required Python packages:
+To start the API, run the following command in your terminal:
 
 ```bash
-pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
-3. Create a `.env` file with your Crypto.com Exchange API key, API secret, and TradingView webhook secret:
+The API will start running at `http://localhost:8000`.
 
-```ini
-CRYPTO_COM_API_KEY=YOUR_CRYPTO_COM_API_KEY
-CRYPTO_COM_API_SECRET=YOUR_CRYPTO_COM_API_SECRET
-TRADINGVIEW_WEBHOOK_SECRET=YOUR_TRADINGVIEW_WEBHOOK_SECRET
-```
+## Endpoints
 
-4. Build and run the Docker container:
+- `POST /webhook`: Receives a POST request from TradingView. The request body should contain the alert data from TradingView.
+- `GET /viewsignal`: Returns the latest signal received from TradingView.
+
+## Deployment
+
+This API is designed to be deployed on AWS Elastic Beanstalk. You can use the included `go.sh` script to automatically add, commit, and push your changes to GitHub, and then deploy them to Elastic Beanstalk. To use the script, simply type `go` in your terminal.
 
 ```bash
-python run_docker.py
+go
 ```
 
-The CryptoTraderAI webhook server will run in a Docker container on port 8000.
+## Contributing
 
-5. Configure your TradingView alerts to use the webhook URL pointing to your server:
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-```
-http://your_server_ip_or_domain:8000/webhook
-```
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
