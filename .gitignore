@@ -4,6 +4,7 @@ logs/*
 .vscode
 __pycache__
 .envrc
+go.sh
 
 # Compiled source #
 ###################
