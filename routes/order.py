@@ -1,13 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
-import json
 
 # Load environment variables
 load_dotenv()
 
-app = FastAPI()
+router = APIRouter()
 
 # Global variable to store the last signal
 last_signal = None
@@ -23,7 +22,7 @@ class Signal(BaseModel):
     interval: str
     strategy: str
 
-@app.post("/order")
+@router.post("/order")
 def create_order(signal: Signal):
     global last_signal
     last_signal = signal
