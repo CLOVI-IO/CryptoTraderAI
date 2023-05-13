@@ -1,16 +1,16 @@
-from fastapi import APIRouter
-import os
+# routes/viewsignal.py
+
+from fastapi import APIRouter, Depends
+from fastapi import FastAPI
+import json
 
 router = APIRouter()
 
-# Global variable to store the last signal
-# Note: Consider using a shared state (like a database or in-memory data store) if this app needs to scale
-last_signal = None
-
 @router.get("/viewsignal")
-def view_signal():
-    global last_signal
+def view_signal(app: FastAPI = Depends()):
+    # Retrieve the last signal from Redis
+    last_signal = app.state.redis.get('last_signal')
     if last_signal:
-        return {"signal": last_signal}
+        return {"signal": json.loads(last_signal)}
     else:
         return {"signal": "No signal"}
