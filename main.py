@@ -14,6 +14,15 @@ app = FastAPI()
 # Initialize Redis client
 r = redis.Redis(host='my-redis-cluster.5thpsv.0001.apse1.cache.amazonaws.com:6379', port=6379, db=0)
 
+# Debug Redis connection
+try:
+    if r.ping():
+        print("Connected to Redis")
+    else:
+        print("Failed to connect to Redis")
+except Exception as e:
+    print(f"An error occurred while connecting to Redis: {e}")
+
 # Include the route endpoints from other files
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)

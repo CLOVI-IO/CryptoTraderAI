@@ -1,9 +1,11 @@
-# routes/webhook.py
-
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi import FastAPI
 import os
 import json
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 router = APIRouter()
 tradingview_ips = (os.getenv("TRADINGVIEW_IPS") or "").split(",")
