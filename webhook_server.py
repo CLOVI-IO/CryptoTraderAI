@@ -1,45 +1,52 @@
-from flask import Flask, request, jsonify
-import os
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel
 from dotenv import load_dotenv
+import os
+import json
+import uvicorn
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+app = FastAPI()
 
-# Read environment variables
-CRYPTO_COM_API_KEY = os.getenv("CRYPTO_COM_API_KEY")
-CRYPTO_COM_API_SECRET = os.getenv("CRYPTO_COM_API_SECRET")
-TRADINGVIEW_WEBHOOK_SECRET = os.getenv("TRADINGVIEW_WEBHOOK_SECRET")
+#TODO: Add TradingView IP verification for Webhook
 
+# Global variable to store the last signal
+last_signal = "No signal yet"
 
-# Helper function to process the received alert
-def process_alert(alert_data):
-    # Implement your logic to process the alert and perform trading actions
-    pass
+class Signal(BaseModel):
+    signal: dict
 
+@app.get("/")
+def read_root():
+    return {"Hello": "World!"}
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    # Validate webhook secret
-    webhook_secret = request.headers.get("X-Webhook-Secret")
-    if webhook_secret != TRADINGVIEW_WEBHOOK_SECRET:
-        return jsonify({"error": "Invalid webhook secret"}), 403
+@app.post("/webhook")
+async def webhook(request: Request):
+    try:
+        global last_signal
+        last_signal = await request.json()
+        print(f"Received signal: {json.dumps(last_signal, indent=2)}")
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Failed to store signal: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while storing the signal")
 
-    # Process the alert based on the Content-Type header
-    content_type = request.content_type
-    if content_type == "application/json":
-        alert_data = request.get_json()
-    elif content_type == "text/plain":
-        alert_data = request.data.decode("utf-8")
-    else:
-        return jsonify({"error": "Unsupported Media Type"}), 415
+@app.get("/viewsignal")
+def view_signal():
+    try:
+        global last_signal
+        print(f"Retrieving signal: {json.dumps(last_signal, indent=2)}")
+        if last_signal:
+            return {"signal": last_signal}
+        else:
+            return {"signal": "No signal"}
+    except Exception as e:
+        print(f"Failed to retrieve signal: {str(e)}")
+        raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
 
-    # Process the alert
-    process_alert(alert_data)
-
-    return jsonify({"message": "Webhook received and processed"}), 200
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

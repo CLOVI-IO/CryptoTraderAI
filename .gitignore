@@ -5,6 +5,8 @@ logs/*
 __pycache__
 .envrc
 go.sh
+.elasticbeanstalk
+.dockerignore
 
 # Compiled source #
 ###################
