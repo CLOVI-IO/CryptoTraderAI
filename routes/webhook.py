@@ -16,11 +16,7 @@ async def webhook(request: Request):
 
     global last_signal
     try:
-        # Assuming the signal is passed as a query parameter named 'signal'
-        last_signal = request.query_params.get('signal')
-        if last_signal is None:
-            raise HTTPException(status_code=400, detail="No signal found in the request")
-
+        last_signal = await request.json()
         print(f"Received signal: {last_signal}")
         return {"status": "ok"}
     except Exception as e:
