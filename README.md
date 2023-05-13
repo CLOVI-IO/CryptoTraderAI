@@ -6,7 +6,9 @@ CryptoTraderAI is an API that receives webhook alerts from TradingView and proce
 
 Before you begin, ensure you have met the following requirements:
 
-- You have a [TradingView](https://www.tradingview.com/gopro/?share_your_love=sperreault) account with a PRO, PRO+ or PREMIUM subscription to receive alert signal (GET endpoint /webhook)
+- You need a [TradingView](https://www.tradingview.com/gopro/?share_your_love=sperreault) account with a PRO, PRO+ or PREMIUM subscription to receive alert signal (GET endpoint /webhook)
+
+- You need a [Crypto.com Exchange](https://crypto.com/exch/ht94engn7h) Account
 
 ## Installation
 
