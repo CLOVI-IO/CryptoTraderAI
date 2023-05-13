@@ -1,59 +1,52 @@
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
-import uvicorn
 from dotenv import load_dotenv
 import os
-import redis
+import json
+import uvicorn
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI()
 
-# List of allowed TradingView IPs
-TRADINGVIEW_IPS = ["52.89.214.238", "34.212.75.30", "54.218.53.128", "52.32.178.7"]
+#TODO: Add TradingView IP verification for Webhook
 
-# Retrieve Redis connection parameters from environment variables
-redis_host = os.getenv("REDIS_HOST")
-redis_port = os.getenv("REDIS_PORT")
-redis_db = os.getenv("REDIS_DB")
-redis_password = os.getenv("REDIS_PASSWORD")
+# Global variable to store the last signal
+last_signal = "No signal yet"
 
-# Initialize Redis client
-try:
-    redis_client = redis.Redis(host=redis_host, port=int(redis_port), db=int(redis_db), password=redis_password)
-    print(f"Connected to Redis server at {redis_host}:{redis_port}")
-except Exception as e:
-    print(f"Failed to connect to Redis server: {e}")
+class Signal(BaseModel):
+    signal: dict
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {"Hello": "World!"}
 
 @app.post("/webhook")
-def webhook(request: Request):
-    client_host = request.client.host
-    if client_host not in TRADINGVIEW_IPS:
-        raise HTTPException(status_code=403, detail="Access denied")
-    # Store the signal in Redis
+async def webhook(request: Request):
     try:
-        redis_client.set('last_signal', request.json())
+        global last_signal
+        last_signal = await request.json()
+        print(f"Received signal: {json.dumps(last_signal, indent=2)}")
         return {"status": "ok"}
     except Exception as e:
-        print(f"Failed to store signal in Redis: {e}")
+        print(f"Failed to store signal: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while storing the signal")
 
 @app.get("/viewsignal")
 def view_signal():
     try:
-        last_signal = redis_client.get('last_signal')
+        global last_signal
+        print(f"Retrieving signal: {json.dumps(last_signal, indent=2)}")
         if last_signal:
-            return {"signal": last_signal.decode('utf-8')}
+            return {"signal": last_signal}
         else:
             return {"signal": "No signal"}
     except Exception as e:
-        print(f"Failed to retrieve signal from Redis: {str(e)}")
+        print(f"Failed to retrieve signal: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
+
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
