@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 import os
 
 router = APIRouter()
-tradingview_ips = os.getenv("TRADINGVIEW_IPS").split(",")
+tradingview_ips = (os.getenv("TRADINGVIEW_IPS") or "").split(",")
 last_signal = None
 
 @router.post("/webhook")

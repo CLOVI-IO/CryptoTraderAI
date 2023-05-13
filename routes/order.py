@@ -12,8 +12,8 @@ router = APIRouter()
 last_signal = None
 
 # Risk management settings
-risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO"))
-risk_percentage = float(os.getenv("RISK_PERCENTAGE"))
+risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO", "0"))
+risk_percentage = float(os.getenv("RISK_PERCENTAGE", "0"))
 
 class Signal(BaseModel):
     symbol: str
