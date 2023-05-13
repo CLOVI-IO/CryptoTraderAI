@@ -9,6 +9,7 @@ load_dotenv()
 router = APIRouter()
 
 # Global variable to store the last signal
+# Note: Consider using a shared state (like a database or in-memory data store) if this app needs to scale
 last_signal = None
 
 # Risk management settings
