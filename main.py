@@ -52,7 +52,7 @@ def view_signal():
         print(f"Failed to retrieve signal: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
 
-@app.post("/order")
+@app.get("/order")
 def place_order(signal: Signal):
     try:
         global last_signal
