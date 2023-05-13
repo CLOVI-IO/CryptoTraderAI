@@ -10,8 +10,6 @@ load_dotenv()
 
 app = FastAPI()
 
-#TODO: Add TradingView IP verification for Webhook
-
 # Global variable to store the last signal
 last_signal = "No signal yet"
 
@@ -45,8 +43,6 @@ def view_signal():
     except Exception as e:
         print(f"Failed to retrieve signal: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
-
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
