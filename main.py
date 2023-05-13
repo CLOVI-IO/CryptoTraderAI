@@ -23,8 +23,16 @@ def read_root():
 @app.post("/webhook")
 async def webhook(request: Request):
     try:
-        global last_signal
-        last_signal = await request.json()
+        content_type = request.headers.get("content-type")
+        if content_type == "text/plain":
+            data = await request.text()
+            last_signal = data.strip()
+        elif content_type == "application/json":
+            data = await request.json()
+            last_signal = data
+        else:
+            raise HTTPException(status_code=400, detail="Invalid content type")
+
         print(f"Received signal: {json.dumps(last_signal, indent=2)}")
         return {"status": "ok"}
     except Exception as e:
