@@ -8,7 +8,7 @@ tradingview_ips = (os.getenv("TRADINGVIEW_IPS") or "").split(",")
 # Note: Consider using a shared state (like a database or in-memory data store) if this app needs to scale
 last_signal = None
 
-@router.post("/webhook")
+@router.get("/webhook")
 async def webhook(request: Request):
     client_host = request.client.host
     if client_host not in tradingview_ips:
@@ -16,7 +16,11 @@ async def webhook(request: Request):
 
     global last_signal
     try:
-        last_signal = await request.json()
+        # Assuming the signal is passed as a query parameter named 'signal'
+        last_signal = request.query_params.get('signal')
+        if last_signal is None:
+            raise HTTPException(status_code=400, detail="No signal found in the request")
+
         print(f"Received signal: {last_signal}")
         return {"status": "ok"}
     except Exception as e:
