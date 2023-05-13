@@ -1,14 +1,18 @@
 from fastapi import APIRouter, Request, HTTPException
+import os
 
 router = APIRouter()
+tradingview_ips = os.getenv("TRADINGVIEW_IPS").split(",")
+last_signal = None
 
 @router.post("/webhook")
 async def webhook(request: Request):
     client_host = request.client.host
-    if client_host not in TRADINGVIEW_IPS:
+    if client_host not in tradingview_ips:
         raise HTTPException(status_code=403, detail="Access denied")
+
+    global last_signal
     try:
-        global last_signal
         last_signal = await request.json()
         print(f"Received signal: {last_signal}")
         return {"status": "ok"}
