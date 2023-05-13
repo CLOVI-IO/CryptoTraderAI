@@ -23,17 +23,11 @@ def read_root():
 @app.post("/webhook")
 async def webhook(request: Request):
     try:
-        content_type = request.headers.get("content-type")
-        if content_type == "text/plain":
-            data = await request.text()
-            last_signal = data.strip()
-        elif content_type == "application/json":
-            data = await request.json()
-            last_signal = data
-        else:
-            raise HTTPException(status_code=400, detail="Invalid content type")
-
-        print(f"Received signal: {json.dumps(last_signal, indent=2)}")
+        global last_signal
+        request_body = await request.body()
+        request_json = json.loads(request_body)
+        last_signal = request_json
+        print(f"Received signal:\nHeaders: {dict(request.headers)}\nBody: {request_json}")
         return {"status": "ok"}
     except Exception as e:
         print(f"Failed to store signal: {e}")
@@ -43,7 +37,7 @@ async def webhook(request: Request):
 def view_signal():
     try:
         global last_signal
-        print(f"Retrieving signal: {json.dumps(last_signal, indent=2)}")
+        print(f"Retrieving signal: {last_signal}")
         if last_signal:
             return {"signal": last_signal}
         else:
