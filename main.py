@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 import json
+import uvicorn
 
 # Load environment variables
 load_dotenv()
@@ -22,28 +23,12 @@ def read_root():
 @app.post("/webhook")
 async def webhook(request: Request):
     try:
-        content_type = request.headers.get("Content-Type")
-        if content_type == "application/json":
-            # Process JSON payload
-            global last_signal
-            last_signal = await request.json()
-            print(f"Received signal: {json.dumps(last_signal, indent=2)}")
-            return {"status": "ok"}
-        elif content_type == "text/plain":
-            # Process plain text payload
-            payload = await request.body()
-            payload_str = payload.decode("utf-8")
-            try:
-                signal_dict = json.loads(payload_str)
-                global last_signal
-                last_signal = signal_dict
-                print(f"Received signal: {json.dumps(last_signal, indent=2)}")
-                return {"status": "ok"}
-            except json.JSONDecodeError as e:
-                print(f"Failed to parse signal: {e}")
-                raise HTTPException(status_code=400, detail="Invalid JSON payload")
-        else:
-            raise HTTPException(status_code=415, detail="Unsupported media type")
+        global last_signal
+        request_body = await request.body()
+        request_json = json.loads(request_body)
+        last_signal = request_json
+        print(f"Received signal:\nHeaders: {dict(request.headers)}\nBody: {request_json}")
+        return {"status": "ok"}
     except Exception as e:
         print(f"Failed to store signal: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while storing the signal")
@@ -52,7 +37,7 @@ async def webhook(request: Request):
 def view_signal():
     try:
         global last_signal
-        print(f"Retrieving signal: {json.dumps(last_signal, indent=2)}")
+        print(f"Retrieving signal: {last_signal}")
         if last_signal:
             return {"signal": last_signal}
         else:
@@ -60,7 +45,6 @@ def view_signal():
     except Exception as e:
         print(f"Failed to retrieve signal: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while retrieving the signal")
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
