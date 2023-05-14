@@ -14,7 +14,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 API_KEY = os.getenv("CRYPTO_COM_API_KEY")
 API_SECRET = os.getenv("CRYPTO_COM_API_SECRET")
-
 WEBSOCKET_URL = os.getenv("WEBSOCKET_URL")
 
 
@@ -56,7 +55,16 @@ class CryptoCom:
         await self.connection.send(json.dumps(message))
 
     async def receive(self):
-        return json.loads(await self.connection.recv())
+        response = await self.connection.recv()
+        data = json.loads(response)
+        if data.get("method") == "public/auth":
+            if data.get("result") != "OK":
+                logging.error(f"Failed to authenticate: {data}")
+            else:
+                logging.debug("Successfully authenticated")
+        else:
+            logging.debug(f"Received data: {data}")
+        return data
 
     async def run(self):
         await self.connect()
