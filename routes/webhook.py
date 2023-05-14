@@ -7,6 +7,8 @@ router = APIRouter()
 
 load_dotenv()  # Load environment variables from .env file
 
+last_signal = None  # Initialize the global variable
+
 
 @router.post("/webhook")
 async def webhook(request: Request):
@@ -21,6 +23,8 @@ async def webhook(request: Request):
 
     try:
         content_type = request.headers.get("content-type", "")
+        print(f"Content type: {content_type}")  # Debug print
+
         if "application/json" in content_type:
             payload = await request.json()
         elif "text/plain" in content_type:
