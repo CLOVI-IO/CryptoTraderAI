@@ -9,5 +9,5 @@ Werkzeug==2.3.3
 redis==5.0.0b3
 pydantic==1.10.7
 six==1.16.0
-
+websockets==11.0.3
 
