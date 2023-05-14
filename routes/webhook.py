@@ -1,21 +1,59 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
-from fastapi import FastAPI
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from dotenv import load_dotenv
 import os
-import json
+
+# Load environment variables
+load_dotenv()
 
 router = APIRouter()
-tradingview_ips = os.getenv("TRADINGVIEW_IPS").split(",")
+
+# Global variable to store the last signal
+# Note: Consider using a shared state (like a database or in-memory data store) if this app needs to scale
+last_signal = None
+
+# Risk management settings
+risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO", "0"))
+risk_percentage = float(os.getenv("RISK_PERCENTAGE", "0"))
+
+class Signal(BaseModel):
+    symbol: str
+    close: float
+    volume: float
+    interval: str
+    strategy: str
 
 @router.post("/webhook")
-async def webhook(request: Request, app: FastAPI = Depends()):
-    client_host = request.client.host
-    if client_host not in tradingview_ips:
-        raise HTTPException(status_code=403, detail="Access denied")
+def webhook(signal: Signal):
+    global last_signal
+    last_signal = signal
 
-    try:
-        app.state.last_signal = await request.json()  # Update the last_signal in the application state
-        print(f"Received signal: {app.state.last_signal}")
-        return {"status": "ok"}
-    except Exception as e:
-        print(f"Failed to store signal: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while storing the signal")
+    # Calculate take-profit and stop-loss levels
+    take_profit = calculate_take_profit(last_signal.close)
+    stop_loss = calculate_stop_loss(last_signal.close)
+
+    # Format JSON output
+    formatted_output = {
+        "symbol": last_signal.symbol,
+        "close": last_signal.close,
+        "volume": last_signal.volume,
+        "interval": last_signal.interval,
+        "strategy": last_signal.strategy,
+        "take_profit": take_profit,
+        "stop_loss": stop_loss,
+        # Add other tags for the Crypto.com exchange API
+        "type": "LIMIT",
+        "side": "BUY",
+        "price": last_signal.close,
+        "quantity": last_signal.volume
+    }
+
+    return formatted_output
+
+def calculate_take_profit(entry_price):
+    take_profit = entry_price + (entry_price * risk_reward_ratio)
+    return round(take_profit, 2)
+
+def calculate_stop_loss(entry_price):
+    stop_loss = entry_price - (entry_price * risk_percentage)
+    return round(stop_loss, 2)
