@@ -1,56 +1,66 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from shared_state import state  # Import the shared state
 import traceback  # import traceback module for detailed error logging
+from typing import Optional
+
 
 router = APIRouter()
 
 
-class Plots(BaseModel):
-    plot_0: str
-    plot_1: str
-
-
+# Define the nested classes for the data model
 class Order(BaseModel):
-    action: str
-    contracts: str
-    price: str
-    id: str
-    comment: str
-    alert_message: str
+    action: Optional[str] = Field(alias="{{strategy.order.action}}")
+    contracts: Optional[str] = Field(alias="{{strategy.order.contracts}}")
+    price: Optional[str] = Field(alias="{{strategy.order.price}}")
+    id: Optional[str] = Field(alias="{{strategy.order.id}}")
+    comment: Optional[str] = Field(alias="{{strategy.order.comment}}")
+    alert_message: Optional[str] = Field(alias="{{strategy.order.alert_message}}")
 
 
 class StrategyInfo(BaseModel):
-    position_size: str
+    position_size: Optional[str] = Field(alias="{{strategy.position_size}}")
     order: Order
-    market_position: str
-    market_position_size: str
-    prev_market_position: str
-    prev_market_position_size: str
+    market_position: Optional[str] = Field(alias="{{strategy.market_position}}")
+    market_position_size: Optional[str] = Field(
+        alias="{{strategy.market_position_size}}"
+    )
+    prev_market_position: Optional[str] = Field(
+        alias="{{strategy.prev_market_position}}"
+    )
+    prev_market_position_size: Optional[str] = Field(
+        alias="{{strategy.prev_market_position_size}}"
+    )
+
+
+class Plots(BaseModel):
+    plot_0: Optional[str] = Field(alias="{{plot_0}}")
+    plot_1: Optional[str] = Field(alias="{{plot_1}}")
 
 
 class CurrentInfo(BaseModel):
-    fire_time: str
+    fire_time: Optional[str] = Field(alias="{{timenow}}")
     plots: Plots
 
 
 class BarInfo(BaseModel):
-    open: str
-    high: str
-    low: str
-    close: str
-    volume: str
-    time: str
+    open: Optional[str] = Field(alias="{{open}}")
+    high: Optional[str] = Field(alias="{{high}}")
+    low: Optional[str] = Field(alias="{{low}}")
+    close: Optional[str] = Field(alias="{{close}}")
+    volume: Optional[str] = Field(alias="{{volume}}")
+    time: Optional[str] = Field(alias="{{time}}")
 
 
 class AlertInfo(BaseModel):
-    exchange: str
-    ticker: str
-    price: str
-    volume: str
-    interval: str
+    exchange: Optional[str] = Field(alias="{{exchange}}")
+    ticker: Optional[str] = Field(alias="{{ticker}}")
+    price: Optional[str] = Field(alias="{{close}}")
+    volume: Optional[str] = Field(alias="{{volume}}")
+    interval: Optional[str] = Field(alias="{{interval}}")
 
 
+# Main Signal model
 class Signal(BaseModel):
     alert_info: AlertInfo
     bar_info: BarInfo
