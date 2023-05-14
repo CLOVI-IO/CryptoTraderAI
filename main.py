@@ -13,6 +13,11 @@ app = FastAPI()
 # Initialize last_signal in the application state
 app.state.last_signal = None
 
+@app.get("/")
+def hello_world():
+    return {"message": "Hello, World!"}
+
+
 # Include the route endpoints from other files
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)
