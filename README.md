@@ -1,6 +1,6 @@
-## TraderAI: AI-Powered Trading System
+## CryptoTraderAI: AI-Powered Trading System
 
-TraderAI is an open-source project that aims to develop an AI-powered trading system. It leverages artificial intelligence, machine learning, and algorithmic trading techniques to provide intelligent trading strategies, automated trade execution, and risk management capabilities.
+CryptoTraderAI is an open-source project that aims to develop an AI-powered trading system. It leverages artificial intelligence, machine learning, and algorithmic trading techniques to provide intelligent trading strategies, automated trade execution, and risk management capabilities.
 
 ## WARNING
 
