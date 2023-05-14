@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 import uvicorn
 
-from routes import webhook
+from routes import webhook, viewsignal
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +21,7 @@ def hello_world():
 
 # Include the route endpoints from other files
 app.include_router(webhook.router)
+app.include_router(viewsignal.router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

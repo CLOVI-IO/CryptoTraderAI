@@ -9,12 +9,8 @@ load_dotenv()
 router = APIRouter()
 
 # Global variable to store the last signal
-# Note: Consider using a shared state (like a database or in-memory data store) if this app needs to scale
 last_signal = None
 
-# Risk management settings
-risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO", "0"))
-risk_percentage = float(os.getenv("RISK_PERCENTAGE", "0"))
 
 class Signal(BaseModel):
     symbol: str
@@ -23,8 +19,9 @@ class Signal(BaseModel):
     interval: str
     strategy: str
 
+
 @router.post("/webhook")
-def webhook(signal: Signal):
+async def webhook(signal: Signal):
     global last_signal
     last_signal = signal
 
@@ -45,15 +42,19 @@ def webhook(signal: Signal):
         "type": "LIMIT",
         "side": "BUY",
         "price": last_signal.close,
-        "quantity": last_signal.volume
+        "quantity": last_signal.volume,
     }
 
     return formatted_output
 
+
 def calculate_take_profit(entry_price):
+    risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO", "0"))
     take_profit = entry_price + (entry_price * risk_reward_ratio)
     return round(take_profit, 2)
 
+
 def calculate_stop_loss(entry_price):
+    risk_percentage = float(os.getenv("RISK_PERCENTAGE", "0"))
     stop_loss = entry_price - (entry_price * risk_percentage)
     return round(stop_loss, 2)
