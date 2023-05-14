@@ -62,10 +62,15 @@ class Signal(BaseModel):
     strategy_info: StrategyInfo
 
 
+# New Payload class
+class Payload(BaseModel):
+    signal: Signal
+
+
 @router.post("/order")
 def get_order(signal: Signal):
     try:
-        last_signal = signal.dict()
+        last_signal = payload.signal.dict()
 
         # Based on the strategy of the signal, define the order type and side
         order_type = "LIMIT"
