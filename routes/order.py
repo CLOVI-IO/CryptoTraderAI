@@ -63,33 +63,30 @@ class Signal(BaseModel):
 
 
 @router.get("/order")
-def get_order():
+def get_order(signal: Signal):
     try:
-        # Check if last_signal has been set in the shared state
-        if "last_signal" not in state or state["last_signal"] is None:
-            raise HTTPException(status_code=400, detail="No signal available")
+        # Retrieve the nested signal from the request
+        last_signal = signal.dict()
 
-        # Retrieve the last signal from the shared state
-        last_signal = Signal(**state["last_signal"])
-
-        print(f"Retrieved signal from shared state: {last_signal}")  # Debug print
+        print(f"Retrieved signal from request: {last_signal}")  # Debug print
 
         # Based on the strategy of the signal, define the order type and side
         order_type = "LIMIT"
-        order_side = last_signal.strategy_info.order.action
+        order_side = "BUY"
+        if last_signal["strategy_info"]["order"]["action"] == "SELL":
+            order_side = "SELL"
 
         # Format JSON output
         formatted_output = {
-            "symbol": last_signal.alert_info.ticker,
-            "close": last_signal.alert_info.price,
-            "volume": last_signal.alert_info.volume,
-            "interval": last_signal.alert_info.interval,
-            "strategy": last_signal.strategy_info.market_position,
-            # Add other tags for the Crypto.com exchange API
+            "symbol": last_signal["alert_info"].get("ticker", "N/A"),
+            "close": last_signal["bar_info"].get("close", "N/A"),
+            "volume": last_signal["alert_info"].get("volume", "N/A"),
+            "interval": last_signal["alert_info"].get("interval", "N/A"),
+            "strategy": last_signal["strategy_info"]["order"].get("action", "N/A"),
             "type": order_type,
             "side": order_side,
-            "price": last_signal.strategy_info.order.price,
-            "quantity": last_signal.strategy_info.position_size,
+            "price": last_signal["bar_info"].get("close", "N/A"),
+            "quantity": last_signal["alert_info"].get("volume", "N/A"),
         }
 
         print(f"Formatted order: {formatted_output}")  # Debug print
