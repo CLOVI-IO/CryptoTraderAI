@@ -10,6 +10,7 @@ load_dotenv()
 
 router = APIRouter()
 
+# Risk management settings
 risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO", "0"))
 risk_percentage = float(os.getenv("RISK_PERCENTAGE", "0"))
 
@@ -22,35 +23,33 @@ class Signal(BaseModel):
     strategy: str
 
 
-@router.post("/order")
+@router.post("/order", response_model=Signal)
 def create_order(signal: Signal):
-    # Replace last_signal with the value from the shared state
-    last_signal = state["last_signal"]
-
+    last_signal = state.get("last_signal")  # Use shared state
     if last_signal is None:
         raise HTTPException(status_code=400, detail="No signal available")
 
     # Calculate take-profit and stop-loss levels
-    take_profit = calculate_take_profit(last_signal.close)
-    stop_loss = calculate_stop_loss(last_signal.close)
+    take_profit = calculate_take_profit(last_signal["close"])
+    stop_loss = calculate_stop_loss(last_signal["close"])
 
     # Format JSON output
     formatted_output = {
-        "symbol": last_signal.symbol,
-        "close": last_signal.close,
-        "volume": last_signal.volume,
-        "interval": last_signal.interval,
-        "strategy": last_signal.strategy,
+        "symbol": last_signal["symbol"],
+        "close": last_signal["close"],
+        "volume": last_signal["volume"],
+        "interval": last_signal["interval"],
+        "strategy": last_signal["strategy"],
         "take_profit": take_profit,
         "stop_loss": stop_loss,
         # Add other tags for the Crypto.com exchange API
         "type": "LIMIT",
         "side": "BUY",
-        "price": last_signal.close,
-        "quantity": last_signal.volume,
+        "price": last_signal["close"],
+        "quantity": last_signal["volume"],
     }
 
-    return formatted_output
+    return formatted_output  # FastAPI will automatically convert this into JSON
 
 
 def calculate_take_profit(entry_price):
