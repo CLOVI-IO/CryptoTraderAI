@@ -58,7 +58,8 @@ class Signal(BaseModel):
     strategy_info: StrategyInfo
 
 
-@router.post("/order")
+# get only for debuging, need to be changed when connection to exchange
+@router.get("/order")
 def get_order(signal: Signal):
     try:
         last_signal = signal.dict()
