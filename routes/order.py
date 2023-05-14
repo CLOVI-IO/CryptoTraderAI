@@ -28,16 +28,16 @@ def get_order():
 
         # Format JSON output
         formatted_output = {
-            "symbol": last_signal.symbol,
-            "close": last_signal.close,
-            "volume": last_signal.volume,
-            "interval": last_signal.interval,
-            "strategy": last_signal.strategy,
+            "symbol": last_signal.get("symbol", "N/A"),
+            "close": last_signal.get("close", "N/A"),
+            "volume": last_signal.get("volume", "N/A"),
+            "interval": last_signal.get("interval", "N/A"),
+            "strategy": last_signal.get("strategy", "N/A"),
             # Add other tags for the Crypto.com exchange API
             "type": "LIMIT",
             "side": "BUY",
-            "price": last_signal.close,
-            "quantity": last_signal.volume,
+            "price": last_signal.get("close", "N/A"),
+            "quantity": last_signal.get("volume", "N/A"),
         }
 
         print(f"Formatted order: {formatted_output}")  # Debug print
