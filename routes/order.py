@@ -10,54 +10,48 @@ router = APIRouter()
 
 # Define the nested classes for the data model
 class Order(BaseModel):
-    action: Optional[str] = Field(alias="{{strategy.order.action}}")
-    contracts: Optional[str] = Field(alias="{{strategy.order.contracts}}")
-    price: Optional[str] = Field(alias="{{strategy.order.price}}")
-    id: Optional[str] = Field(alias="{{strategy.order.id}}")
-    comment: Optional[str] = Field(alias="{{strategy.order.comment}}")
-    alert_message: Optional[str] = Field(alias="{{strategy.order.alert_message}}")
+    action: Optional[str]
+    contracts: Optional[str]
+    price: Optional[str]
+    id: Optional[str]
+    comment: Optional[str]
+    alert_message: Optional[str]
 
 
 class StrategyInfo(BaseModel):
-    position_size: Optional[str] = Field(alias="{{strategy.position_size}}")
+    position_size: Optional[str]
     order: Order
-    market_position: Optional[str] = Field(alias="{{strategy.market_position}}")
-    market_position_size: Optional[str] = Field(
-        alias="{{strategy.market_position_size}}"
-    )
-    prev_market_position: Optional[str] = Field(
-        alias="{{strategy.prev_market_position}}"
-    )
-    prev_market_position_size: Optional[str] = Field(
-        alias="{{strategy.prev_market_position_size}}"
-    )
+    market_position: Optional[str]
+    market_position_size: Optional[str]
+    prev_market_position: Optional[str]
+    prev_market_position_size: Optional[str]
 
 
 class Plots(BaseModel):
-    plot_0: Optional[str] = Field(alias="{{plot_0}}")
-    plot_1: Optional[str] = Field(alias="{{plot_1}}")
+    plot_0: Optional[str]
+    plot_1: Optional[str]
 
 
 class CurrentInfo(BaseModel):
-    fire_time: Optional[str] = Field(alias="{{timenow}}")
+    fire_time: Optional[str]
     plots: Plots
 
 
 class BarInfo(BaseModel):
-    open: Optional[str] = Field(alias="{{open}}")
-    high: Optional[str] = Field(alias="{{high}}")
-    low: Optional[str] = Field(alias="{{low}}")
-    close: Optional[str] = Field(alias="{{close}}")
-    volume: Optional[str] = Field(alias="{{volume}}")
-    time: Optional[str] = Field(alias="{{time}}")
+    open: Optional[str]
+    high: Optional[str]
+    low: Optional[str]
+    close: Optional[str]
+    volume: Optional[str]
+    time: Optional[str]
 
 
 class AlertInfo(BaseModel):
-    exchange: Optional[str] = Field(alias="{{exchange}}")
-    ticker: Optional[str] = Field(alias="{{ticker}}")
-    price: Optional[str] = Field(alias="{{close}}")
-    volume: Optional[str] = Field(alias="{{volume}}")
-    interval: Optional[str] = Field(alias="{{interval}}")
+    exchange: Optional[str]
+    ticker: Optional[str]
+    price: Optional[str]
+    volume: Optional[str]
+    interval: Optional[str]
 
 
 # Main Signal model
@@ -68,8 +62,7 @@ class Signal(BaseModel):
     strategy_info: StrategyInfo
 
 
-# get only for debuging, need to be changed when connection to exchange
-@router.get("/order")
+@router.post("/order")
 def get_order(signal: Signal):
     try:
         last_signal = signal.dict()
