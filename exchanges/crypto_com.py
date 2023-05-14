@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 
 
 class CryptoCom:
+    nonce_counter = 1  # Start a counter for nonce
+
     def __init__(self):
         load_dotenv()
         self.api_key = os.getenv("CRYPTO_COM_API_KEY")
@@ -23,14 +25,15 @@ class CryptoCom:
         self.connection = None
 
     async def connect(self):
-        print(f"Connecting to {self.websocket_url} with API key {self.api_key}")
         self.connection = await websockets.connect(self.websocket_url)
         if self.connection.open:
             print("Connection established.")
             await self.authenticate()
 
     async def authenticate(self):
-        nonce = int(time.time() * 1000)
+        nonce = int(time.time() * 1000) + self.nonce_counter  # Increment the nonce
+        CryptoCom.nonce_counter += 1  # Increment the counter
+
         signature = hmac.new(
             bytes(self.api_secret, "utf-8"),
             msg=f"{self.api_key}{nonce}".encode("utf-8"),
@@ -40,7 +43,7 @@ class CryptoCom:
         auth_payload = {
             "method": "public/auth",
             "params": {"api_key": self.api_key, "nonce": nonce, "sig": signature},
-            "id": 11,
+            "id": 1,
         }
         await self.connection.send(json.dumps(auth_payload))
         response = await self.connection.recv()
@@ -48,11 +51,22 @@ class CryptoCom:
         if data.get("result") == "ok":
             print("Authentication successful.")
         else:
-            print(f"Authentication failed: {response}")
+            print("Authentication failed. Please check your API key and secret.")
+
+    async def subscribe(self, channel):
+        subscription_payload = {
+            "method": "subscribe",
+            "params": {"channels": [channel]},
+            "id": 2,
+        }
+        await self.connection.send(json.dumps(subscription_payload))
+        response = await self.connection.recv()
+        print(f"Response to subscription request: {response}")
 
     async def run(self):
         await self.connect()
 
 
-crypto_com = CryptoCom()
-asyncio.get_event_loop().run_until_complete(crypto_com.run())
+if __name__ == "__main__":
+    crypto_com = CryptoCom()
+    asyncio.get_event_loop().run_until_complete(crypto_com.run())
