@@ -8,15 +8,15 @@ This is an experimental project in development to learn to build with AI in the 
 
 ## Key Objectives (The Plan)
 
-Maximize Account Growth: TraderAI aims to generate consistent profits and increase the overall value of your trading account. It achieves this by identifying high-potential trading opportunities and executing trades with favorable risk-reward ratios.
+Maximize Account Growth: CryptoTraderAI aims to generate consistent profits and increase the overall value of your trading account. It achieves this by identifying high-potential trading opportunities and executing trades with favorable risk-reward ratios.
 
-Intelligent Execution: With TraderAI, trades are executed in the most optimal and intelligent manner. Market conditions, liquidity, timing, and trade execution costs are carefully considered to ensure efficient and effective execution.
+Intelligent Execution: With CryptoTraderAI, trades are executed in the most optimal and intelligent manner. Market conditions, liquidity, timing, and trade execution costs are carefully considered to ensure efficient and effective execution.
 
-Signal Analysis: TraderAI employs sophisticated algorithms and machine learning techniques to analyze and evaluate trading signals. It filters out noise and identifies the strongest signals with the highest probability of success, enhancing the accuracy and reliability of your trading decisions.
+Signal Analysis: CryptoTraderAI employs sophisticated algorithms and machine learning techniques to analyze and evaluate trading signals. It filters out noise and identifies the strongest signals with the highest probability of success, enhancing the accuracy and reliability of your trading decisions.
 
-Risk Management: Protecting your trading account is a top priority for TraderAI. It incorporates robust risk management strategies, including factors such as risk-reward ratio, position sizing, stop-loss levels, and diversification, to mitigate potential losses and manage risk effectively.
+Risk Management: Protecting your trading account is a top priority for CryptoTraderAI. It incorporates robust risk management strategies, including factors such as risk-reward ratio, position sizing, stop-loss levels, and diversification, to mitigate potential losses and manage risk effectively.
 
-Continuous Learning and Improvement: TraderAI is constantly learning and adapting to changing market conditions. It leverages historical data, market trends, and user interactions to enhance its trading strategies and algorithms, ensuring continuous improvement over time.
+Continuous Learning and Improvement: CryptoTraderAI is constantly learning and adapting to changing market conditions. It leverages historical data, market trends, and user interactions to enhance its trading strategies and algorithms, ensuring continuous improvement over time.
 
 ## Goal
 
