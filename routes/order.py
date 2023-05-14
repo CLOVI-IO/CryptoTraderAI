@@ -4,6 +4,19 @@ from shared_state import state  # Import the shared state
 import traceback  # import traceback module for detailed error logging
 from typing import Optional
 
+# Output json Exemple
+# {
+#     "symbol": "SOLUSDT",
+#     "close": "20.96",
+#     "volume": "256.81",
+#     "interval": "1",
+#     "strategy": "Open Long",
+#     "type": "LIMIT",
+#     "side": "BUY",
+#     "price": "20.96",
+#     "quantity": "256.81"
+# }
+
 
 router = APIRouter()
 
