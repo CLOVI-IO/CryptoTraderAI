@@ -28,6 +28,9 @@ def create_order(signal: Signal):
     global last_signal
     last_signal = signal
 
+    if last_signal is None:
+        raise HTTPException(status_code=400, detail="No signal available")
+
     # Calculate take-profit and stop-loss levels
     take_profit = calculate_take_profit(last_signal.close)
     stop_loss = calculate_stop_loss(last_signal.close)
