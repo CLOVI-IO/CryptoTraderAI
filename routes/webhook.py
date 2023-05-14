@@ -8,7 +8,7 @@ router = APIRouter()
 load_dotenv()  # Load environment variables from .env file
 
 
-@router.get("/webhook")
+@router.post("/webhook")
 async def webhook(request: Request):
     client_host = request.client.host
     tradingview_ips = os.getenv("TRADINGVIEW_IPS", "").split(",")
