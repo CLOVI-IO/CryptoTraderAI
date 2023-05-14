@@ -14,6 +14,7 @@ async def webhook(request: Request):
     tradingview_ips = os.getenv("TRADINGVIEW_IPS", "").split(",")
     if client_host not in tradingview_ips:
         raise HTTPException(status_code=403, detail="Access denied")
+
     try:
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
@@ -24,11 +25,13 @@ async def webhook(request: Request):
         else:
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
+        # Process the payload or store it as required
         global last_signal
         last_signal = payload
         print(f"Received signal: {last_signal}")
 
         return {"status": "ok"}
+
     except Exception as e:
         print(f"Failed to store signal: {e}")
         raise HTTPException(
