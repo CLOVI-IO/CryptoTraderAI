@@ -11,7 +11,11 @@ load_dotenv()  # Load environment variables from .env file
 @router.post("/webhook")
 async def webhook(request: Request):
     client_host = request.client.host
+    print(f"Client host: {client_host}")  # Debug print
+
     tradingview_ips = os.getenv("TRADINGVIEW_IPS", "").split(",")
+    print(f"TradingView IPs: {tradingview_ips}")  # Debug print
+
     if client_host not in tradingview_ips:
         raise HTTPException(status_code=403, detail="Access denied")
 
