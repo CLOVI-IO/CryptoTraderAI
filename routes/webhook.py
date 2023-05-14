@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi import FastAPI
+from dotenv import load_dotenv
 import os
 import json
-from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 router = APIRouter()
-tradingview_ips = (os.getenv("TRADINGVIEW_IPS") or "").split(",")
+tradingview_ips = os.getenv("TRADINGVIEW_IPS").split(",")
 
-@router.get("/webhook")
+@router.post("/webhook")
 async def webhook(request: Request, app: FastAPI = Depends()):
     client_host = request.client.host
     if client_host not in tradingview_ips:
