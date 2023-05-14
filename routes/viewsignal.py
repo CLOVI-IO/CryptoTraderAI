@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-last_signal = None
+# last_signal = None
 
 
 @router.get("/viewsignal")
