@@ -21,7 +21,7 @@ def hello_world():
 # Include the route endpoints from other files
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)
-app.include_router(order.router)
+#app.include_router(order.router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
