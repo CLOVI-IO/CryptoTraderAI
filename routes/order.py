@@ -1,20 +1,18 @@
+# order.py
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
+from shared_state import state  # Import the shared state
 
 # Load environment variables
 load_dotenv()
 
 router = APIRouter()
 
-# Global variable to store the last signal
-# Note: Consider using a shared state (like a database or in-memory data store) if this app needs to scale
-last_signal = None
-
-# Risk management settings
 risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO", "0"))
 risk_percentage = float(os.getenv("RISK_PERCENTAGE", "0"))
+
 
 class Signal(BaseModel):
     symbol: str
@@ -23,10 +21,11 @@ class Signal(BaseModel):
     interval: str
     strategy: str
 
+
 @router.post("/order")
 def create_order(signal: Signal):
-    global last_signal
-    last_signal = signal
+    # Replace last_signal with the value from the shared state
+    last_signal = state["last_signal"]
 
     if last_signal is None:
         raise HTTPException(status_code=400, detail="No signal available")
@@ -48,14 +47,16 @@ def create_order(signal: Signal):
         "type": "LIMIT",
         "side": "BUY",
         "price": last_signal.close,
-        "quantity": last_signal.volume
+        "quantity": last_signal.volume,
     }
 
     return formatted_output
 
+
 def calculate_take_profit(entry_price):
     take_profit = entry_price + (entry_price * risk_reward_ratio)
     return round(take_profit, 2)
+
 
 def calculate_stop_loss(entry_price):
     stop_loss = entry_price - (entry_price * risk_percentage)
