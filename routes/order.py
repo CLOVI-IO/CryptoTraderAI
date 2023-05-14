@@ -68,7 +68,7 @@ class Payload(BaseModel):
 
 
 @router.post("/order")
-def get_order(signal: Signal):
+def get_order(payload: Payload):
     try:
         last_signal = payload.signal.dict()
 
