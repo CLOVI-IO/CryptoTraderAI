@@ -1,13 +1,13 @@
+# webhook.py
 from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv
 import os
 import json
+from shared_state import state  # Import the shared state
 
 router = APIRouter()
 
 load_dotenv()  # Load environment variables from .env file
-
-last_signal = None  # Initialize the global variable
 
 
 @router.post("/webhook")
@@ -34,9 +34,8 @@ async def webhook(request: Request):
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
         # Process the payload or store it as required
-        global last_signal
-        last_signal = payload
-        print(f"Received signal: {last_signal}")
+        state["last_signal"] = payload  # Update the shared state
+        print(f"Received signal: {state['last_signal']}")
 
         return {"status": "ok"}
 
