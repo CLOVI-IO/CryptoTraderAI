@@ -1,60 +1,56 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from shared_state import state  # Import the shared state
 import traceback  # import traceback module for detailed error logging
 
 router = APIRouter()
 
 
-# Define the nested classes for the data model
+class Plots(BaseModel):
+    plot_0: str
+    plot_1: str
+
+
 class Order(BaseModel):
-    action: str = Field(alias="{{strategy.order.action}}")
-    contracts: str = Field(alias="{{strategy.order.contracts}}")
-    price: str = Field(alias="{{strategy.order.price}}")
-    id: str = Field(alias="{{strategy.order.id}}")
-    comment: str = Field(alias="{{strategy.order.comment}}")
-    alert_message: str = Field(alias="{{strategy.order.alert_message}}")
+    action: str
+    contracts: str
+    price: str
+    id: str
+    comment: str
+    alert_message: str
 
 
 class StrategyInfo(BaseModel):
-    position_size: str = Field(alias="{{strategy.position_size}}")
+    position_size: str
     order: Order
-    market_position: str = Field(alias="{{strategy.market_position}}")
-    market_position_size: str = Field(alias="{{strategy.market_position_size}}")
-    prev_market_position: str = Field(alias="{{strategy.prev_market_position}}")
-    prev_market_position_size: str = Field(
-        alias="{{strategy.prev_market_position_size}}"
-    )
-
-
-class Plots(BaseModel):
-    plot_0: str = Field(alias="{{plot_0}}")
-    plot_1: str = Field(alias="{{plot_1}}")
+    market_position: str
+    market_position_size: str
+    prev_market_position: str
+    prev_market_position_size: str
 
 
 class CurrentInfo(BaseModel):
-    fire_time: str = Field(alias="{{timenow}}")
+    fire_time: str
     plots: Plots
 
 
 class BarInfo(BaseModel):
-    open: str = Field(alias="{{open}}")
-    high: str = Field(alias="{{high}}")
-    low: str = Field(alias="{{low}}")
-    close: str = Field(alias="{{close}}")
-    volume: str = Field(alias="{{volume}}")
-    time: str = Field(alias="{{time}}")
+    open: str
+    high: str
+    low: str
+    close: str
+    volume: str
+    time: str
 
 
 class AlertInfo(BaseModel):
-    exchange: str = Field(alias="{{exchange}}")
-    ticker: str = Field(alias="{{ticker}}")
-    price: str = Field(alias="{{close}}")
-    volume: str = Field(alias="{{volume}}")
-    interval: str = Field(alias="{{interval}}")
+    exchange: str
+    ticker: str
+    price: str
+    volume: str
+    interval: str
 
 
-# Main Signal model
 class Signal(BaseModel):
     alert_info: AlertInfo
     bar_info: BarInfo
@@ -62,13 +58,10 @@ class Signal(BaseModel):
     strategy_info: StrategyInfo
 
 
-@router.get("/order")
+@router.post("/order")
 def get_order(signal: Signal):
     try:
-        # Retrieve the nested signal from the request
         last_signal = signal.dict()
-
-        print(f"Retrieved signal from request: {last_signal}")  # Debug print
 
         # Based on the strategy of the signal, define the order type and side
         order_type = "LIMIT"
@@ -78,18 +71,16 @@ def get_order(signal: Signal):
 
         # Format JSON output
         formatted_output = {
-            "symbol": last_signal["alert_info"].get("ticker", "N/A"),
-            "close": last_signal["bar_info"].get("close", "N/A"),
-            "volume": last_signal["alert_info"].get("volume", "N/A"),
-            "interval": last_signal["alert_info"].get("interval", "N/A"),
-            "strategy": last_signal["strategy_info"]["order"].get("action", "N/A"),
+            "symbol": last_signal["alert_info"]["ticker"],
+            "close": last_signal["bar_info"]["close"],
+            "volume": last_signal["alert_info"]["volume"],
+            "interval": last_signal["alert_info"]["interval"],
+            "strategy": last_signal["strategy_info"]["order"]["action"],
             "type": order_type,
             "side": order_side,
-            "price": last_signal["bar_info"].get("close", "N/A"),
-            "quantity": last_signal["alert_info"].get("volume", "N/A"),
+            "price": last_signal["bar_info"]["close"],
+            "quantity": last_signal["alert_info"]["volume"],
         }
-
-        print(f"Formatted order: {formatted_output}")  # Debug print
 
         return formatted_output
 
