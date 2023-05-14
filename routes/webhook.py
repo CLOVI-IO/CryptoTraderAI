@@ -1,60 +1,36 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv
 import os
-
-# Load environment variables
-load_dotenv()
+import json
 
 router = APIRouter()
 
-# Global variable to store the last signal
-last_signal = None
-
-
-class Signal(BaseModel):
-    symbol: str
-    close: float
-    volume: float
-    interval: str
-    strategy: str
+load_dotenv()  # Load environment variables from .env file
 
 
 @router.post("/webhook")
-async def webhook(signal: Signal):
-    global last_signal
-    last_signal = signal
+async def webhook(request: Request):
+    client_host = request.client.host
+    tradingview_ips = os.getenv("TRADINGVIEW_IPS", "").split(",")
+    if client_host not in tradingview_ips:
+        raise HTTPException(status_code=403, detail="Access denied")
+    try:
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            payload = await request.json()
+        elif "text/plain" in content_type:
+            payload = await request.text()
+            payload = json.loads(payload)  # Convert text payload to JSON
+        else:
+            raise HTTPException(status_code=415, detail="Unsupported media type")
 
-    # Calculate take-profit and stop-loss levels
-    take_profit = calculate_take_profit(last_signal.close)
-    stop_loss = calculate_stop_loss(last_signal.close)
+        global last_signal
+        last_signal = payload
+        print(f"Received signal: {last_signal}")
 
-    # Format JSON output
-    formatted_output = {
-        "symbol": last_signal.symbol,
-        "close": last_signal.close,
-        "volume": last_signal.volume,
-        "interval": last_signal.interval,
-        "strategy": last_signal.strategy,
-        "take_profit": take_profit,
-        "stop_loss": stop_loss,
-        # Add other tags for the Crypto.com exchange API
-        "type": "LIMIT",
-        "side": "BUY",
-        "price": last_signal.close,
-        "quantity": last_signal.volume,
-    }
-
-    return formatted_output
-
-
-def calculate_take_profit(entry_price):
-    risk_reward_ratio = float(os.getenv("RISK_REWARD_RATIO", "0"))
-    take_profit = entry_price + (entry_price * risk_reward_ratio)
-    return round(take_profit, 2)
-
-
-def calculate_stop_loss(entry_price):
-    risk_percentage = float(os.getenv("RISK_PERCENTAGE", "0"))
-    stop_loss = entry_price - (entry_price * risk_percentage)
-    return round(stop_loss, 2)
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Failed to store signal: {e}")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while storing the signal"
+        )
