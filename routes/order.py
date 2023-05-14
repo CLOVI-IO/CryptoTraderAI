@@ -26,6 +26,12 @@ def get_order():
 
         print(f"Retrieved signal from shared state: {last_signal}")  # Debug print
 
+        # Based on the strategy of the signal, define the order type and side
+        order_type = "LIMIT"
+        order_side = "BUY"
+        if last_signal.get("strategy") == "SELL":
+            order_side = "SELL"
+
         # Format JSON output
         formatted_output = {
             "symbol": last_signal.get("symbol", "N/A"),
@@ -34,8 +40,8 @@ def get_order():
             "interval": last_signal.get("interval", "N/A"),
             "strategy": last_signal.get("strategy", "N/A"),
             # Add other tags for the Crypto.com exchange API
-            "type": "LIMIT",
-            "side": "BUY",
+            "type": order_type,
+            "side": order_side,
             "price": last_signal.get("close", "N/A"),
             "quantity": last_signal.get("volume", "N/A"),
         }
