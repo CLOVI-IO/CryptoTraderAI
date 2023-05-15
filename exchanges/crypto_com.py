@@ -7,6 +7,7 @@ import json
 import os
 import logging
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
@@ -23,6 +24,12 @@ class CryptoCom:
             if self.environment == "PRODUCTION"
             else os.getenv("SANDBOX_USER_API_WEBSOCKET")
         )
+        self.request_counter = 0
+
+    def get_nonce(self):
+        utc_time = datetime.now(timezone.utc)
+        utc_timestamp = utc_time.timestamp()
+        return int((utc_timestamp - 5) * 1000)  # Subtract 5 seconds from the nonce
 
     async def connect(self):
         async with websockets.connect(
@@ -30,23 +37,16 @@ class CryptoCom:
         ) as websocket:
             logging.debug("Connection to {} established.".format(self.websocket_url))
 
-            # Prepare the authentication message
-            nonce = int(time.time() * 1000)  # Use only timestamp for nonce
+            # Wait for 1 second after establishing the WebSocket connection
+            await asyncio.sleep(1)
+
+            nonce = self.get_nonce()
             params = {"api_key": self.api_key, "nonce": nonce}
-
-            # Sort the keys and combine them in key-value pairs
-            param_string = "".join([f"{k}{v}" for k, v in sorted(params.items())])
-
-            message_string = (
-                "public/auth" + str(nonce) + self.api_key + param_string + str(nonce)
-            )
-
             params["sig"] = hmac.new(
                 self.api_secret,
-                msg=message_string.encode("utf-8"),
+                msg=str(params["nonce"]).encode("utf-8"),
                 digestmod=hashlib.sha256,
             ).hexdigest()
-
             message = {"id": nonce, "method": "public/auth", "params": params}
             await websocket.send(json.dumps(message))
 
