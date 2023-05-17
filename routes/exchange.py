@@ -4,6 +4,11 @@ import importlib
 router = APIRouter()
 
 
+@router.get("/exchange/")
+def get_enabled_exchanges():
+    return {"enabled_exchanges": ["crypto_com"]}
+
+
 @router.get("/exchange/{exchange_name}")
 def get_exchange_data(exchange_name: str):
     try:
