@@ -1,13 +1,15 @@
-# webhook.py
 from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv
 import os
 import json
-from shared_state import state  # Import the shared state
+import redis
 
 router = APIRouter()
 
 load_dotenv()  # Load environment variables from .env file
+
+# Initialize Redis client (assuming Redis is running on localhost:6379)
+r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
 
 @router.post("/webhook")
@@ -34,8 +36,9 @@ async def webhook(request: Request):
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
         # Process the payload or store it as required
-        state["last_signal"] = payload  # Update the shared state
-        print(f"Received signal: {state['last_signal']}")
+        # Assuming payload is serializable via str()
+        r.set("last_signal", json.dumps(payload))  # Update the Redis store
+        print(f"Received signal: {payload}")
 
         return {"status": "ok"}
 
