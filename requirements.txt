@@ -6,8 +6,9 @@ uvicorn==0.22.0
 httpx==0.24.0
 gunicorn==20.1.0
 Werkzeug==2.3.3
-redis==5.0.0b3
+redis==3.5.3
 pydantic==1.10.7
 six==1.16.0
 websockets==11.0.3
 ntplib
+redis-py-cluster=2.1.3

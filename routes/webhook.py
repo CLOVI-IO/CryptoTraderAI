@@ -2,20 +2,24 @@ from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv
 import os
 import json
-import redis
+from rediscluster import RedisCluster
 
 router = APIRouter()
 
 load_dotenv()  # Load environment variables from .env file
 
-# Initialize Redis client with SSL
-r = redis.Redis(
-    host="clustercfg.traderai-api-redis.5thpsv.apse1.cache.amazonaws.com",
-    port=6379,
-    db=0,
-    ssl=False,  # Enable SSL
-    ssl_ca_certs="/path/to/ca/cert",  # Path to the CA certificate file
+# Initialize Redis Cluster client with SSL
+startup_nodes = [
+    {
+        "host": "clustercfg.traderai-api-redis.5thpsv.apse1.cache.amazonaws.com",
+        "port": "6379",
+    }
+]
+r = RedisCluster(
+    startup_nodes=startup_nodes,
     decode_responses=True,
+    ssl=True,
+    ssl_ca_certs="/path/to/ca/cert",
 )
 
 
