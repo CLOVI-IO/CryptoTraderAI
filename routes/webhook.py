@@ -8,19 +8,14 @@ router = APIRouter()
 
 load_dotenv()  # Load environment variables from .env file
 
-# Initialize Redis Cluster client with SSL
+# Initialize Redis Cluster client without SSL
 startup_nodes = [
     {
         "host": "clustercfg.traderai-api-redis.5thpsv.apse1.cache.amazonaws.com",
         "port": "6379",
     }
 ]
-r = RedisCluster(
-    startup_nodes=startup_nodes,
-    decode_responses=True,
-    ssl=True,
-    ssl_ca_certs="/path/to/ca/cert",
-)
+r = RedisCluster(startup_nodes=startup_nodes, decode_responses=True)
 
 
 @router.post("/webhook")
