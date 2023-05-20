@@ -1,15 +1,13 @@
+# webhook.py
 from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv
 import os
 import json
-import redis
+from shared_state import state  # Import the shared state
 
 router = APIRouter()
 
 load_dotenv()  # Load environment variables from .env file
-
-# Initialize Redis client (assuming Redis is running on localhost:6379)
-r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
 
 @router.post("/webhook")
@@ -30,23 +28,19 @@ async def webhook(request: Request):
         if "application/json" in content_type:
             payload = await request.json()
         elif "text/plain" in content_type:
-            body_bytes = await request.body()  # Get raw body bytes
-            body_text = body_bytes.decode()  # Decode bytes to string
-            payload = json.loads(body_text)  # Convert text payload to JSON
+            payload = await request.text()
+            payload = json.loads(payload)  # Convert text payload to JSON
         else:
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
         # Process the payload or store it as required
-        # Assuming payload is serializable via str()
-        r.set("last_signal", json.dumps(payload))  # Update the Redis store
-        print(f"Received signal: {payload}")
+        state["last_signal"] = payload  # Update the shared state
+        print(f"Received signal: {state['last_signal']}")
 
         return {"status": "ok"}
 
     except Exception as e:
         print(f"Failed to store signal: {e}")
-        # Include original error message in HTTPException response
         raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while storing the signal: {str(e)}",
+            status_code=500, detail="An error occurred while storing the signal"
         )
