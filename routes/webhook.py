@@ -44,6 +44,8 @@ async def webhook(request: Request):
 
     except Exception as e:
         print(f"Failed to store signal: {e}")
+        # Include original error message in HTTPException response
         raise HTTPException(
-            status_code=500, detail="An error occurred while storing the signal"
+            status_code=500,
+            detail=f"An error occurred while storing the signal: {str(e)}",
         )
