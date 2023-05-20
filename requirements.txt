@@ -10,5 +10,4 @@ redis==3.5.3
 pydantic==1.10.7
 six==1.16.0
 websockets==11.0.3
-ntplib
-redis-py-cluster=2.1.3
+ntplib==0.4.0
