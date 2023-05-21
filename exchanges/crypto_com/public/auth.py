@@ -1,3 +1,4 @@
+# public/auth.py
 import time
 import hashlib
 import hmac
