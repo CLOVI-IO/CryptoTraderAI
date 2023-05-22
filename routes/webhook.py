@@ -28,7 +28,8 @@ async def webhook(request: Request):
         if "application/json" in content_type:
             payload = await request.json()
         elif "text/plain" in content_type:
-            payload = await request.text()
+            body = await request.body()
+            payload = body.decode()  # Decode bytes to string
             payload = json.loads(payload)  # Convert text payload to JSON
         else:
             raise HTTPException(status_code=415, detail="Unsupported media type")
