@@ -7,6 +7,7 @@ redis_endpoint = os.getenv("REDIS_ENDPOINT")
 # Create a connection to the Redis server
 try:
     r = redis.Redis(host=redis_endpoint, port=6379, db=0)
+
     # Test the connection
     r.ping()
     print("Connected to Redis at", redis_endpoint)
