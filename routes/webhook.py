@@ -16,6 +16,10 @@ def test_redis():
     REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))  # use 6379 as default if not set
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")  # will be None if not set
 
+    print(
+        f"Attempting to connect to Redis at host {REDIS_HOST}, port {REDIS_PORT}, with password {'provided' if REDIS_PASSWORD else 'not provided'}"
+    )
+
     try:
         r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
         response = r.ping()  # will raise an exception if can't connect to Redis
