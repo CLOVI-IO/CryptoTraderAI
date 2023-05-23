@@ -8,7 +8,7 @@ from shared_state import state  # Import the shared state
 
 router = APIRouter()
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv("../.env")  # Load environment variables from .env file
 
 
 def test_redis():
