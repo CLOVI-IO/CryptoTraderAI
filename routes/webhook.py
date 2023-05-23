@@ -1,6 +1,9 @@
 # webhook.py
 from fastapi import APIRouter, Request, HTTPException
-from dotenv import load_dotenv
+
+# from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
+
 import os
 import json
 import redis  # add this
@@ -8,7 +11,8 @@ from shared_state import state  # Import the shared state
 
 router = APIRouter()
 
-load_dotenv("../.env")  # Load environment variables from .env file
+# load_dotenv("../.env")  # Load environment variables from .env file
+load_dotenv(find_dotenv())
 
 
 def test_redis():
