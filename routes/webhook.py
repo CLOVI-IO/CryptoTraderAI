@@ -12,7 +12,8 @@ load_dotenv("../.env")  # Load environment variables from .env file
 
 
 def test_redis():
-    REDIS_HOST = os.getenv("REDIS_HOST")
+    # REDIS_HOST = os.getenv("REDIS_HOST")
+    REDIS_HOST = "clustercfg.redis-cluster.5thpsv.apse1.cache.amazonaws.com"
     REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))  # use 6379 as default if not set
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")  # will be None if not set
 
