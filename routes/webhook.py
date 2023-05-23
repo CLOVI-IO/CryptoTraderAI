@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv
 import os
 import json
+import redis  # add this
 from shared_state import state  # Import the shared state
 
 router = APIRouter()
@@ -10,8 +11,23 @@ router = APIRouter()
 load_dotenv()  # Load environment variables from .env file
 
 
+def test_redis():
+    REDIS_HOST = os.getenv("REDIS_HOST")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))  # use 6379 as default if not set
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")  # will be None if not set
+
+    try:
+        r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
+        response = r.ping()  # will raise an exception if can't connect to Redis
+        print("Connected to Redis successfully!")
+    except Exception as e:
+        print(f"Error connecting to Redis: {str(e)}")
+
+
 @router.post("/webhook")
 async def webhook(request: Request):
+    test_redis()  # test Redis connection at the start of the route
+
     client_host = request.client.host
     print(f"Client host: {client_host}")  # Debug print
 
