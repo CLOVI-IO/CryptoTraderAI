@@ -8,6 +8,7 @@ import redis
 
 router = APIRouter()
 
+
 # Define the nested classes for the data model
 class Order(BaseModel):
     action: Optional[str]
@@ -17,6 +18,7 @@ class Order(BaseModel):
     comment: Optional[str]
     alert_message: Optional[str]
 
+
 class StrategyInfo(BaseModel):
     position_size: Optional[str]
     order: Order
@@ -25,13 +27,16 @@ class StrategyInfo(BaseModel):
     prev_market_position: Optional[str]
     prev_market_position_size: Optional[str]
 
+
 class Plots(BaseModel):
     plot_0: Optional[str]
     plot_1: Optional[str]
 
+
 class CurrentInfo(BaseModel):
     fire_time: Optional[str]
     plots: Plots
+
 
 class BarInfo(BaseModel):
     open: Optional[str]
@@ -41,12 +46,14 @@ class BarInfo(BaseModel):
     volume: Optional[str]
     time: Optional[str]
 
+
 class AlertInfo(BaseModel):
     exchange: Optional[str]
     ticker: Optional[str]
     price: Optional[str]
     volume: Optional[str]
     interval: Optional[str]
+
 
 # Main Signal model
 class Signal(BaseModel):
@@ -55,18 +62,22 @@ class Signal(BaseModel):
     current_info: CurrentInfo
     strategy_info: StrategyInfo
 
+
 # New Payload class
 class Payload(BaseModel):
     signal: Signal
 
+
 @router.post("/order")
-def get_order(payload: Payload,
-              client_oid: Optional[str] = None,
-              exec_inst: Optional[List[str]] = None,
-              time_in_force: Optional[str] = None,
-              ref_price: Optional[str] = None,
-              ref_price_type: Optional[str] = None,
-              spot_margin: Optional[str] = None):
+def get_order(
+    payload: Payload,
+    client_oid: Optional[str] = None,
+    exec_inst: Optional[List[str]] = None,
+    time_in_force: Optional[str] = None,
+    ref_price: Optional[str] = None,
+    ref_price_type: Optional[str] = None,
+    spot_margin: Optional[str] = None,
+):
     try:
         REDIS_HOST = os.getenv("REDIS_HOST")
         REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
@@ -79,7 +90,7 @@ def get_order(payload: Payload,
         action = last_signal["strategy_info"]["order"]["action"]
 
         # Split action into side and type
-        order_side, order_type = action.split('_')
+        order_side, order_type = action.split("_")
 
         # Format JSON output
         order = {
@@ -108,4 +119,12 @@ def get_order(payload: Payload,
         if spot_margin:
             order["spot_margin"] = spot_margin
 
-       
+        # Store order in Redis
+        r.set("last_order", json.dumps(order))
+
+        return order
+
+    except Exception as e:
+        # print the traceback of the error
+        print(f"Failed to create order. Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
