@@ -7,7 +7,7 @@ from dotenv import load_dotenv, find_dotenv
 import os
 import json
 import redis  # add this
-from shared_state import state  # Import the shared state
+from ..shared_state import state  # Import the shared state
 
 router = APIRouter()
 
