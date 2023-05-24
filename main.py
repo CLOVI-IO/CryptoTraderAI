@@ -3,15 +3,12 @@ from dotenv import load_dotenv
 import os
 import uvicorn
 
-from routes import webhook, viewsignal, order, exchange
+from routes import webhook, viewsignal, order, last_order, exchange
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI()
-
-# Initialize last_signal in the application state
-app.state.last_signal = None
 
 
 @app.get("/")
@@ -23,6 +20,7 @@ def hello_world():
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)
 app.include_router(order.router)
+app.include_router(last_order.router)
 app.include_router(exchange.router)
 
 if __name__ == "__main__":

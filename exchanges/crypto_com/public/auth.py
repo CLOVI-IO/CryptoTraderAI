@@ -41,9 +41,6 @@ async def connect():
             "nonce": nonce,
         }
 
-        # Printing last 5 characters of the API key
-        print(f"Last 5 characters of the API key: {api_key[-5:]}")
-
         # Saving the send time
         send_time = datetime.datetime.utcnow()
 
@@ -59,19 +56,30 @@ async def connect():
             if "id" in response and response["id"] == id:
                 receive_time = datetime.datetime.utcnow()
                 latency = receive_time - send_time
-                print(f"Latency: {latency.total_seconds()} seconds")
+                latency_seconds = latency.total_seconds()
+
+                # Create a dictionary to store the result
+                result = {}
 
                 if "code" in response:
                     if response["code"] == 0:
-                        print("Authenticated successfully")
+                        result["message"] = "Authenticated successfully"
                     else:
-                        print(
-                            f"Authentication failed with error code: {response['code']}"
-                        )
+                        result[
+                            "message"
+                        ] = f"Authentication failed with error code: {response['code']}"
                 else:
-                    print("No 'code' field in the response")
-                break  # Exit the loop when authentication response is received
+                    result["message"] = "No 'code' field in the response"
+
+                # Add latency to the result
+                result["latency"] = latency_seconds
+
+                # Return the result in JSON format
+                return result
+
+            break  # Exit the loop when authentication response is received
 
 
 # Running the connect coroutine
-asyncio.get_event_loop().run_until_complete(connect())
+result = asyncio.get_event_loop().run_until_complete(connect())
+print(json.dumps(result))

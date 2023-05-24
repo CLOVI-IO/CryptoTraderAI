@@ -1,15 +1,22 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-import traceback  # import traceback module for detailed error logging
+import traceback
 from typing import Optional, List
 import os
 import json
 import redis
+import asyncio
+import time
+import logging
+
+from exchanges.crypto_com.public import auth
 
 router = APIRouter()
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 
-# Define the nested classes for the data model
+
 class Order(BaseModel):
     action: Optional[str]
     contracts: Optional[str]
@@ -55,7 +62,6 @@ class AlertInfo(BaseModel):
     interval: Optional[str]
 
 
-# Main Signal model
 class Signal(BaseModel):
     alert_info: AlertInfo
     bar_info: BarInfo
@@ -63,13 +69,12 @@ class Signal(BaseModel):
     strategy_info: StrategyInfo
 
 
-# New Payload class
 class Payload(BaseModel):
     signal: Signal
 
 
 @router.post("/order")
-def get_order(
+async def get_order(
     payload: Payload,
     client_oid: Optional[str] = None,
     exec_inst: Optional[List[str]] = None,
@@ -78,21 +83,24 @@ def get_order(
     ref_price_type: Optional[str] = None,
     spot_margin: Optional[str] = None,
 ):
+    start_time = time.time()
     try:
+        # auth_response = await auth.authenticate()
+        # if auth_response["message"] != "Authenticated successfully":
+        #    raise HTTPException(status_code=401, detail="User is not authenticated")
+
+        # Log auth response for debugging
+        # logging.debug(f"Auth response: {auth_response}")
+
         REDIS_HOST = os.getenv("REDIS_HOST")
         REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
         REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
         r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
 
         last_signal = json.loads(r.get("last_signal"))
-
-        # Extract action from the strategy_info
         action = last_signal["strategy_info"]["order"]["action"]
-
-        # Split action into side and type
         order_side, order_type = action.split("_")
 
-        # Format JSON output
         order = {
             "instrument_name": last_signal["alert_info"]["ticker"],
             "close": last_signal["bar_info"]["close"],
@@ -105,7 +113,6 @@ def get_order(
             "quantity": last_signal["alert_info"]["volume"],
         }
 
-        # Add optional parameters if they're provided
         if client_oid:
             order["client_oid"] = client_oid
         if exec_inst:
@@ -119,12 +126,25 @@ def get_order(
         if spot_margin:
             order["spot_margin"] = spot_margin
 
-        # Store order in Redis
         r.set("last_order", json.dumps(order))
 
-        return order
+        end_time = time.time()
+        latency = end_time - start_time
+
+        # Log order for debugging
+        logging.debug(f"Order: {order}")
+
+        response = {
+            "last_order": order,
+            "execution_time": end_time,
+            "latency": latency,
+        }
+
+        # Log order for debugging
+        logging.debug(f"Order: {order}")
+
+        return response
 
     except Exception as e:
-        # print the traceback of the error
-        print(f"Failed to create order. Traceback: {traceback.format_exc()}")
+        logging.error(f"Failed to create order. Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
