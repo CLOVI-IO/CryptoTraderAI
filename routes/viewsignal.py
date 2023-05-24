@@ -1,62 +1,50 @@
 # viewsignal.py
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from shared_state import state  # Import the shared state
+from dotenv import load_dotenv, find_dotenv
+import os
+import json
+import redis
 
-# Output json Exemple
-# {
-# "signal": {
-# "alert_info": {
-# "exchange": "BINANCE",
-# "ticker": "SOLUSDT",
-# "price": "20.96",
-# "volume": "256.81",
-# "interval": "1"
-# },
-# "bar_info": {
-# "open": "20.94",
-# "high": "20.96",
-# "low": "20.94",
-# "close": "20.96",
-# "volume": "256.81",
-# "time": "2023-05-14T18:32:00Z"
-# },
-# "current_info": {
-# "fire_time": "2023-05-14T18:32:46Z",
-# "plots": {
-# "plot_0": "20.936280714571126",
-# "plot_1": "20.94"
-# }
-# },
-# "strategy_info": {
-# "position_size": "{{strategy.position_size}}",
-# "order": {
-# "action": "Open Long",
-# "contracts": "{{strategy.order.contracts}}",
-# "price": "{{strategy.order.price}}",
-# "id": "{{strategy.order.id}}",
-# "comment": "{{strategy.order.comment}}",
-# "alert_message": "{{strategy.order.alert_message}}"
-# },
-# "market_position": "{{strategy.market_position}}",
-# "market_position_size": "{{strategy.market_position_size}}",
-# "prev_market_position": "{{strategy.prev_market_position}}",
-# "prev_market_position_size": "{{strategy.prev_market_position_size}}"
-# }
-# }
-# }
-
+# load dotenv in the root dir
+load_dotenv(find_dotenv())
 
 router = APIRouter()
 
 
+def connect_to_redis():
+    REDIS_HOST = os.getenv("REDIS_HOST")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+
+    try:
+        r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
+        r.ping()
+        print("Connected to Redis successfully!")
+        return r
+    except Exception as e:
+        print(f"Error connecting to Redis: {str(e)}")
+        return None
+
+
 @router.get("/viewsignal")
 def view_signal():
+    redis_client = connect_to_redis()
+    if redis_client is None:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Failed to connect to Redis"},
+        )
     try:
-        print(f"Retrieving signal: {state['last_signal']}")
-        if state["last_signal"]:
-            return {"signal": state["last_signal"]}
+        last_signal = redis_client.get("last_signal")
+        if last_signal is not None:
+            signal = json.loads(
+                last_signal.decode()
+            )  # Convert JSON string to Python object
+            print(f"Retrieved signal from Redis: {signal}")
+            return {"signal": signal}
         else:
+            print("No signal found in Redis")
             return {"signal": "No signal"}
     except Exception as e:
         print(f"Failed to retrieve signal: {str(e)}")
