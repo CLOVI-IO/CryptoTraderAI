@@ -1,5 +1,3 @@
-# auth.py
-
 import time
 import hashlib
 import hmac
@@ -29,54 +27,59 @@ class Authentication:
         self.websocket = await websockets.connect(uri)
 
     async def authenticate(self):
-        if self.websocket is None:
-            await self.connect()
-
-        api_key = os.getenv("CRYPTO_COM_API_KEY")
-        secret_key = os.getenv("CRYPTO_COM_API_SECRET")
-        nonce = str(int(time.time() * 1000))
-        method = "public/auth"
-        id = int(nonce)
-
-        sig_payload = method + str(id) + api_key + nonce
-        sig = hmac.new(
-            secret_key.encode(), sig_payload.encode(), hashlib.sha256
-        ).hexdigest()
-
-        auth_request = {
-            "id": id,
-            "method": method,
-            "api_key": api_key,
-            "sig": sig,
-            "nonce": nonce,
-        }
-
-        print(f"Last 5 characters of the API key: {api_key[-5:]}")
-
-        send_time = datetime.datetime.utcnow()
-
-        await self.websocket.send(json.dumps(auth_request))
-
         while True:
-            response = await self.websocket.recv()
-            response = json.loads(response)
+            if self.websocket is None or self.websocket.closed:
+                await self.connect()
 
-            if "id" in response and response["id"] == id:
-                receive_time = datetime.datetime.utcnow()
-                latency = receive_time - send_time
-                print(f"Latency: {latency.total_seconds()} seconds")
+            api_key = os.getenv("CRYPTO_COM_API_KEY")
+            secret_key = os.getenv("CRYPTO_COM_API_SECRET")
+            nonce = str(int(time.time() * 1000))
+            method = "public/auth"
+            id = int(nonce)
 
-                if "code" in response:
-                    if response["code"] == 0:
-                        self.authenticated = True
-                        return {"message": "Authenticated successfully"}
+            sig_payload = method + str(id) + api_key + nonce
+            sig = hmac.new(
+                secret_key.encode(), sig_payload.encode(), hashlib.sha256
+            ).hexdigest()
+
+            auth_request = {
+                "id": id,
+                "method": method,
+                "api_key": api_key,
+                "sig": sig,
+                "nonce": nonce,
+            }
+
+            print(f"Last 5 characters of the API key: {api_key[-5:]}")
+
+            send_time = datetime.datetime.utcnow()
+
+            try:
+                await self.websocket.send(json.dumps(auth_request))
+                response = await self.websocket.recv()
+                response = json.loads(response)
+
+                if "id" in response and response["id"] == id:
+                    receive_time = datetime.datetime.utcnow()
+                    latency = receive_time - send_time
+                    print(f"Latency: {latency.total_seconds()} seconds")
+
+                    if "code" in response:
+                        if response["code"] == 0:
+                            self.authenticated = True
+                            print("Authenticated successfully")
+                            await asyncio.sleep(
+                                60 * 5
+                            )  # sleep for 5 minutes before re-authenticating
+                        else:
+                            self.authenticated = False
+                            print(
+                                f"Authentication failed with error code: {response['code']}"
+                            )
                     else:
-                        self.authenticated = False
-                        return {
-                            "message": f"Authentication failed with error code: {response['code']}"
-                        }
-                else:
-                    return {"message": "No 'code' field in the response"}
+                        print("No 'code' field in the response")
+            except websockets.exceptions.ConnectionClosedOK:
+                print("WebSocket connection closed, reconnecting...")
 
     async def send_request(self, request: dict):
         if not self.authenticated:
