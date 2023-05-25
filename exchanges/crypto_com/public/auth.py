@@ -29,33 +29,19 @@ class Authentication:
 
         try:
             self.websocket = await websockets.connect(uri)
+            logging.info("Successfully connected to the WebSocket.")
         except Exception as e:
             logging.error(f"Failed to connect to the WebSocket: {e}")
             raise
 
     async def send_auth_request(self):
-        api_key = os.getenv("CRYPTO_COM_API_KEY")
-        secret_key = os.getenv("CRYPTO_COM_API_SECRET")
-        nonce = str(int(time.time() * 1000))
-        method = "public/auth"
-        id = int(nonce)
+        # [The rest of your code here...]
 
-        sig_payload = method + str(id) + api_key + nonce
-        sig = hmac.new(
-            secret_key.encode(), sig_payload.encode(), hashlib.sha256
-        ).hexdigest()
-
-        auth_request = {
-            "id": id,
-            "method": method,
-            "api_key": api_key,
-            "sig": sig,
-            "nonce": nonce,
-        }
-
-        logging.debug(f"Last 5 characters of the API key: {api_key[-5:]}")
-
-        await self.websocket.send(json.dumps(auth_request))
+        try:
+            await self.websocket.send(json.dumps(auth_request))
+        except Exception as e:
+            logging.error(f"Failed to send the auth request: {e}")
+            raise
         return id
 
     async def authenticate(self):
@@ -64,28 +50,15 @@ class Authentication:
                 await self.connect()
 
             id = await self.send_auth_request()
-            response = await self.websocket.recv()
-            response = json.loads(response)
 
-            if "id" in response and response["id"] == id:
-                if "code" in response:
-                    if response["code"] == 0:
-                        self.authenticated = True
-                        logging.info("Authenticated successfully")
-                        await asyncio.sleep(
-                            60 * 5
-                        )  # sleep for 5 minutes before re-authenticating
-                    else:
-                        self.authenticated = False
-                        logging.error(
-                            f"Authentication failed with error code: {response['code']}"
-                        )
-                else:
-                    logging.error("No 'code' field in the response")
-            else:
-                logging.error(
-                    f"Response id does not match request id. Request id: {id}, Response: {response}"
-                )
+            try:
+                response = await self.websocket.recv()
+                response = json.loads(response)
+            except Exception as e:
+                logging.error(f"Failed to receive the auth response: {e}")
+                continue  # Try authenticating again
+
+            # [The rest of your code here...]
 
     async def send_request(self, request: dict):
         if not self.authenticated:
@@ -96,6 +69,10 @@ class Authentication:
                 "WebSocket is not initialized or closed. Please check the connection."
             )
 
-        await self.websocket.send(json.dumps(request))
-        response = await self.websocket.recv()
-        return json.loads(response)
+        try:
+            await self.websocket.send(json.dumps(request))
+            response = await self.websocket.recv()
+            return json.loads(response)
+        except Exception as e:
+            logging.error(f"Failed to send the request or receive the response: {e}")
+            raise
