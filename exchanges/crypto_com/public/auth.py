@@ -1,3 +1,5 @@
+# auth.py
+
 import time
 import hashlib
 import hmac
@@ -11,27 +13,36 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-async def authenticate():
-    environment = os.getenv("ENVIRONMENT", "SANDBOX")
-    if environment == "PRODUCTION":
-        uri = os.getenv("PRODUCTION_USER_API_WEBSOCKET")
-    else:
-        uri = os.getenv("SANDBOX_USER_API_WEBSOCKET")
+class Authentication:
+    def __init__(self):
+        self.websocket = None
+        self.loop = asyncio.get_event_loop()
+        self.authenticated = False
 
-    async with websockets.connect(uri) as websocket:
+    async def connect(self):
+        environment = os.getenv("ENVIRONMENT", "SANDBOX")
+        if environment == "PRODUCTION":
+            uri = os.getenv("PRODUCTION_USER_API_WEBSOCKET")
+        else:
+            uri = os.getenv("SANDBOX_USER_API_WEBSOCKET")
+
+        self.websocket = await websockets.connect(uri)
+
+    async def authenticate(self):
+        if self.websocket is None:
+            await self.connect()
+
         api_key = os.getenv("CRYPTO_COM_API_KEY")
         secret_key = os.getenv("CRYPTO_COM_API_SECRET")
         nonce = str(int(time.time() * 1000))
         method = "public/auth"
         id = int(nonce)
-        # Generating the sig
-        sig_payload = (
-            method + str(id) + api_key + nonce
-        )  # there are no params in this case
+
+        sig_payload = method + str(id) + api_key + nonce
         sig = hmac.new(
             secret_key.encode(), sig_payload.encode(), hashlib.sha256
         ).hexdigest()
-        # Preparing the authentication request
+
         auth_request = {
             "id": id,
             "method": method,
@@ -40,21 +51,16 @@ async def authenticate():
             "nonce": nonce,
         }
 
-        # Printing last 5 characters of the API key
         print(f"Last 5 characters of the API key: {api_key[-5:]}")
 
-        # Saving the send time
         send_time = datetime.datetime.utcnow()
 
-        # Sending the authentication request
-        await websocket.send(json.dumps(auth_request))
+        await self.websocket.send(json.dumps(auth_request))
 
-        # Continuously read messages until authentication response is received
         while True:
-            response = await websocket.recv()
+            response = await self.websocket.recv()
             response = json.loads(response)
 
-            # If the response id matches the request id, calculate the latency
             if "id" in response and response["id"] == id:
                 receive_time = datetime.datetime.utcnow()
                 latency = receive_time - send_time
@@ -62,15 +68,28 @@ async def authenticate():
 
                 if "code" in response:
                     if response["code"] == 0:
+                        self.authenticated = True
                         return {"message": "Authenticated successfully"}
                     else:
+                        self.authenticated = False
                         return {
                             "message": f"Authentication failed with error code: {response['code']}"
                         }
                 else:
                     return {"message": "No 'code' field in the response"}
 
+    async def send_request(self, request: dict):
+        if not self.authenticated:
+            await self.authenticate()
+        await self.websocket.send(json.dumps(request))
+        response = await self.websocket.recv()
+        return json.loads(response)
 
-# This line is optional. It allows the authenticate function to run when this script is run directly.
-# If you don't want this behavior, you can comment or delete this line.
-# asyncio.get_event_loop().run_until_complete(authenticate())
+
+# When you run python3 -m exchanges.crypto_com.public.auth,
+# it should execute the authenticate method of the Authentication
+# class and attempt to authenticate the user.
+
+#  if __name__ == "__main__":
+#    auth = Authentication()
+#    asyncio.get_event_loop().run_until_complete(auth.authenticate())
