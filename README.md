@@ -6,6 +6,10 @@ CryptoTraderAI is an open-source project that aims to develop an AI-powered trad
 
 This is an experimental project in development to learn to build with AI in the context of trading and financial markets.
 
+## Goal
+
+Increase user account value. Increase success of signal. Minimize risk.
+
 ## Key Objectives (The Plan)
 
 `Maximize Account Growth`: CryptoTraderAI aims to generate consistent profits and increase the overall value of your trading account. It achieves this by identifying high-potential trading opportunities and executing trades with favorable risk-reward ratios.
@@ -17,8 +21,6 @@ This is an experimental project in development to learn to build with AI in the 
 `Risk Management`: Protecting your trading account is a top priority for CryptoTraderAI. It incorporates robust risk management strategies, including factors such as risk-reward ratio, position sizing, stop-loss levels, and diversification, to mitigate potential losses and manage risk effectively.
 
 `Continuous Learning and Improvement`: CryptoTraderAI is constantly learning and adapting to changing market conditions. It leverages historical data, market trends, and user interactions to enhance its trading strategies and algorithms, ensuring continuous improvement over time.
-
-## Goal
 
 ## Prerequisites
 
