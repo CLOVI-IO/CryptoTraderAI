@@ -10,11 +10,15 @@ from typing import Optional, List
 
 from models import Payload
 from exchanges.crypto_com.public import auth
+from .tradeguard import fetch_order_quantity
 
 router = APIRouter()
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
+
+# Fetch trade percentage from environment variable
+TRADE_PERCENTAGE = float(os.getenv("TRADE_PERCENTAGE", 10))
 
 
 @router.post("/order")
@@ -38,16 +42,26 @@ async def get_order(
         action = last_signal["strategy_info"]["order"]["action"]
         order_side, order_type = action.split("_")
 
+        # Fetch order quantity from TradeGuard
+        amount_available_to_trade = await fetch_order_quantity(ref_price)
+
+        logging.debug(f"Amount available to trade: {amount_available_to_trade}")
+
+        ref_price = last_signal["bar_info"]["close"]
+        quantity_to_buy = amount_available_to_trade / float(ref_price)
+
+        logging.debug(f"Quantity to buy: {quantity_to_buy}")
+
         order = {
             "instrument_name": last_signal["alert_info"]["ticker"],
-            "close": last_signal["bar_info"]["close"],
+            "close": ref_price,
             "volume": last_signal["alert_info"]["volume"],
             "interval": last_signal["alert_info"]["interval"],
             "strategy": action,
             "type": order_type,
             "side": order_side,
-            "price": last_signal["bar_info"]["close"],
-            "quantity": last_signal["alert_info"]["volume"],
+            "price": ref_price,
+            "quantity": quantity_to_buy,  # use the calculated quantity
         }
 
         if client_oid:
