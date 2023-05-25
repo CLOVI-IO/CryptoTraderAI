@@ -77,25 +77,28 @@ class Authentication:
                 logging.error(f"Failed to receive the auth response: {e}")
                 continue  # Try authenticating again
 
-            if "id" in response and response["id"] == id:
-                if "code" in response:
-                    if response["code"] == 0:
-                        self.authenticated = True
-                        logging.info("Authenticated successfully")
-                        await asyncio.sleep(
-                            60 * 5
-                        )  # sleep for 5 minutes before re-authenticating
+            if "id" in response:
+                if response["id"] == id:
+                    if "code" in response:
+                        if response["code"] == 0:
+                            self.authenticated = True
+                            logging.info("Authenticated successfully")
+                            await asyncio.sleep(
+                                60 * 5
+                            )  # sleep for 5 minutes before re-authenticating
+                        else:
+                            self.authenticated = False
+                            logging.error(
+                                f"Authentication failed with error code: {response['code']}"
+                            )
                     else:
-                        self.authenticated = False
-                        logging.error(
-                            f"Authentication failed with error code: {response['code']}"
-                        )
+                        logging.error("No 'code' field in the response")
                 else:
-                    logging.error("No 'code' field in the response")
+                    logging.error(
+                        f"Response id does not match request id. Request id: {id}, Response: {response}"
+                    )
             else:
-                logging.error(
-                    f"Response id does not match request id. Request id: {id}, Response: {response}"
-                )
+                logging.warning(f"Unexpected response: {response}")
 
     async def send_request(self, request: dict):
         if not self.authenticated:
