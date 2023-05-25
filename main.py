@@ -4,7 +4,7 @@ import os
 import uvicorn
 
 # Include the new modules
-from exchanges.crypto_com.private import user_balance
+from exchanges.crypto_com.private import user_balance, create_order
 from routes import (
     webhook,
     viewsignal,
@@ -33,6 +33,7 @@ app.include_router(last_order.router)
 app.include_router(exchange.router)
 app.include_router(user_balance.router)
 app.include_router(tradeguard.router)  # Add tradeguard router here
+app.include_router(create_order.router)  # Add create_order router here
 
 
 if __name__ == "__main__":
