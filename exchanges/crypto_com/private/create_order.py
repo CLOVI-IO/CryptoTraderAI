@@ -33,7 +33,7 @@ request_sample = {
 }
 
 
-@router.post("/create_order")
+@router.post("/exchanges/crypto_com/private/create_order")
 async def create_order():
     try:
         redis_handler = RedisHandler()
