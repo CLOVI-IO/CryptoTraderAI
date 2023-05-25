@@ -4,7 +4,7 @@ CryptoTraderAI is an open-source project that aims to develop an AI-powered trad
 
 ## WARNING
 
-This is an experimental project in development to learn to build with AI in the context of trading and financial markets.
+WARNING: CryptoTraderAI is an experimental, AI-powered trading project, developed with the objective of learning and exploring AI in trading contexts. Use of this system is at your own risk. We are not responsible for any trading decisions or outcomes associated with its use. Always conduct thorough research and consult professionals before making any financial decisions.
 
 ## Goal
 
