@@ -13,17 +13,21 @@ TRADE_PERCENTAGE = float(
 )  # get trade percentage from environment variable
 
 
-async def fetch_order_quantity(ref_price):
-    # Fetch user balance from Redis
-    user_balance_data = redis_handler.redis_client.get("user_balance")
-    if not user_balance_data:
-        raise HTTPException(status_code=500, detail="User balance not found in Redis.")
+async def fetch_order_quantity(ref_price: float):
+    # Fetch user balance
+    user_balance_response = await fetch_user_balance()
+    if (
+        "result" not in user_balance_response
+        or "USDT" not in user_balance_response["result"]
+        or "available" not in user_balance_response["result"]["USDT"]
+    ):
+        raise HTTPException(status_code=500, detail="Unable to fetch user balance")
 
-    user_balance = json.loads(user_balance_data)
+    user_balance = user_balance_response["result"]["USDT"]["available"]
+
     # Calculating the amount available for trading
-    amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(
-        user_balance["result"]["USDT"]["available"]
-    )
+    amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(user_balance)
+
     # Calculating order quantity
     order_quantity = amount_available_to_trade / float(ref_price)
 
