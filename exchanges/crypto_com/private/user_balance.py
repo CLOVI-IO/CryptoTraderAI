@@ -1,5 +1,3 @@
-# user_balance.py
-
 from fastapi import APIRouter, HTTPException
 import asyncio
 import time
@@ -48,7 +46,7 @@ async def fetch_user_balance():
             # Retrieve stored data for debugging purposes
             user_balance_redis = redis_handler.redis_client.get("user_balance")
             print(f"Retrieved from Redis: {user_balance_redis}")
-            return response, latency
+            return response
         else:
             raise Exception(f"Error fetching user balance. Response: {response}")
 
@@ -60,7 +58,7 @@ async def fetch_user_balance():
 @router.post("/exchanges/crypto_com/private/user_balance")
 async def get_user_balance():
     try:
-        response, latency = await fetch_user_balance()
+        response = await fetch_user_balance()
         return {"response": response, "latency": latency}
     except Exception as e:
         raise HTTPException(
