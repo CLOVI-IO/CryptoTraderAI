@@ -21,12 +21,14 @@ async def fetch_order_quantity(ref_price):
 
     user_balance = json.loads(user_balance_data)
 
-    if "USD" not in user_balance["result"]:
-        raise HTTPException(status_code=500, detail="USD not found in user balance.")
+    if "USDC" not in user_balance["result"]:
+        raise HTTPException(
+            status_code=500, detail="USDC not found in user balance. {user_balance}"
+        )
 
     # Calculating the amount available for trading
     amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(
-        user_balance["result"]["USD"]["available"]
+        user_balance["result"]["USDC"]["available"]
     )
     # Calculating order quantity
     order_quantity = amount_available_to_trade / float(ref_price)
