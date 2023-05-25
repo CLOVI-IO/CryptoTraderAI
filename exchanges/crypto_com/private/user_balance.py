@@ -37,8 +37,15 @@ async def fetch_user_balance():
     if "id" in response and response["id"] == id:
         if "code" in response and response["code"] == 0:
             # Store user balance in Redis
-            redis_handler.redis_client.set("user_balance", json.dumps(response))
-            print("Stored user balance in Redis.")
+            if response is not None:
+                json_response = json.dumps(response)
+                if json_response is not None:
+                    redis_handler.redis_client.set("user_balance", json_response)
+                    print("Stored user balance in Redis.")
+                else:
+                    print("json.dumps(response) returned None.")
+            else:
+                print("Response was None.")
             # Retrieve stored data for debugging purposes
             user_balance_redis = redis_handler.redis_client.get("user_balance")
             print(f"Retrieved from Redis: {user_balance_redis}")
