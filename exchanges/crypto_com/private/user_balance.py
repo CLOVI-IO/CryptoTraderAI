@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, WebSocket
+from fastapi import APIRouter, HTTPException
 import asyncio
 import time
 import json
@@ -12,48 +12,45 @@ router = APIRouter()
 
 
 async def fetch_user_balance():
-    try:
-        # authenticate when required
-        if not auth.authenticated:
-            print("Authenticating...")
-            await auth.authenticate()
+    # authenticate when required
+    if not auth.authenticated:
+        print("Authenticating...")
+        await auth.authenticate()
 
-        nonce = str(int(time.time() * 1000))
-        method = "private/user-balance"
-        id = int(nonce)
+    nonce = str(int(time.time() * 1000))
+    method = "private/user-balance"
+    id = int(nonce)
 
-        request = {
-            "id": id,
-            "method": method,
-            "params": {},
-            "nonce": nonce,
-        }
+    request = {
+        "id": id,
+        "method": method,
+        "params": {},
+        "nonce": nonce,
+    }
 
-        print("Sending request:", request)
-        response = await auth.send_request(request)
+    print("Sending request:", request)
+    await auth.send_request(request)
 
+    while True:
+        response = await auth.websocket.recv()
+        response = json.loads(response)
         print("Received response:", response)
 
         if "id" in response and response["id"] == id:
             if "code" in response and response["code"] == 0:
                 # Store user balance in Redis
-                user_balance = json.dumps(response)
-                current_balance = redis_handler.redis_client.get("user_balance")
-
-                if user_balance != current_balance:
-                    redis_handler.redis_client.set("user_balance", user_balance)
-                    print("Stored user balance in Redis.")
-                    # Retrieve stored data for debugging purposes
-                    user_balance_redis = redis_handler.redis_client.get("user_balance")
-                    print(f"Retrieved from Redis: {user_balance_redis}")
-
+                redis_handler.redis_client.set("user_balance", json.dumps(response))
+                print("Stored user balance in Redis.")
+                # Retrieve stored data for debugging purposes
+                user_balance_redis = redis_handler.redis_client.get("user_balance")
+                print(f"Retrieved from Redis: {user_balance_redis}")
+                return response
             else:
                 raise Exception(f"Error fetching user balance. Response: {response}")
-        return response
 
-    except WebSocket.exceptions.ConnectionClosedOK:
-        print("WebSocket connection closed, reconnecting...")
-        await auth.connect()
+        raise Exception(
+            f"Response id does not match request id. Request id: {id}, Response: {response}"
+        )
 
 
 @router.post("/exchanges/crypto_com/private/user_balance")
