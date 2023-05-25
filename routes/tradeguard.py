@@ -13,22 +13,25 @@ TRADE_PERCENTAGE = float(
 )  # get trade percentage from environment variable
 
 
-async def fetch_order_quantity(ref_price: float):
-    # Fetch user balance
-    user_balance_response = await fetch_user_balance()
-    if (
-        "result" not in user_balance_response
-        or "USDT" not in user_balance_response["result"]
-        or "available" not in user_balance_response["result"]["USDT"]
-    ):
-        raise HTTPException(status_code=500, detail="Unable to fetch user balance")
+async def fetch_order_quantity(ref_price):
+    # Fetch user balance from Redis
+    user_balance_data = redis_handler.redis_client.get("user_balance")
+    if not user_balance_data:
+        raise HTTPException(status_code=500, detail="User balance not found in Redis.")
 
-    user_balance = user_balance_response["result"]["USDT"]["available"]
-
+    user_balance = json.loads(user_balance_data)
     # Calculating the amount available for trading
-    amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(user_balance)
-
+    amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(
+        user_balance["result"]["USDT"]["available"]
+    )
     # Calculating order quantity
     order_quantity = amount_available_to_trade / float(ref_price)
 
     return order_quantity
+
+
+# New endpoint for getting order quantity
+@router.get("/order_quantity/{ref_price}")
+async def get_order_quantity(ref_price: float):
+    quantity = await fetch_order_quantity(ref_price)
+    return {"quantity": quantity}
