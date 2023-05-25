@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket
 import asyncio
 import time
 import json
@@ -51,7 +51,7 @@ async def fetch_user_balance():
                 raise Exception(f"Error fetching user balance. Response: {response}")
         return response
 
-    except websockets.exceptions.ConnectionClosedOK:
+    except WebSocket.exceptions.ConnectionClosedOK:
         print("WebSocket connection closed, reconnecting...")
         await auth.connect()
 
