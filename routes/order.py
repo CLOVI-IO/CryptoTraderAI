@@ -8,7 +8,7 @@ import time
 import logging
 from typing import Optional, List
 
-from ..models import Payload
+from models import Payload
 from exchanges.crypto_com.public import auth
 
 router = APIRouter()

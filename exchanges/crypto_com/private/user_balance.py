@@ -1,12 +1,14 @@
-# user-balance.py
+# user_balance.py
 
 from fastapi import APIRouter, HTTPException
 import asyncio
 import time
 import json
 from exchanges.crypto_com.public.auth import Authentication
+from redis_handler import RedisHandler
 
 auth = Authentication()
+redis_handler = RedisHandler()
 
 router = APIRouter()
 
@@ -34,6 +36,12 @@ async def fetch_user_balance():
 
     if "id" in response and response["id"] == id:
         if "code" in response and response["code"] == 0:
+            # Store user balance in Redis
+            redis_handler.redis_client.set("user_balance", json.dumps(response))
+            print("Stored user balance in Redis.")
+            # Retrieve stored data for debugging purposes
+            user_balance_redis = redis_handler.redis_client.get("user_balance")
+            print(f"Retrieved from Redis: {user_balance_redis}")
             return response
         else:
             raise Exception("Error fetching user balance")
@@ -41,7 +49,7 @@ async def fetch_user_balance():
     raise Exception("Response id does not match request id")
 
 
-@router.post("/exchanges/crypto_com/private/user-balance")
+@router.post("/exchanges/crypto_com/private/user_balance")
 async def get_user_balance():
     try:
         response = await fetch_user_balance()
