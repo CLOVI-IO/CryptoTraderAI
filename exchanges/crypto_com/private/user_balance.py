@@ -12,8 +12,6 @@ router = APIRouter()
 
 
 async def fetch_user_balance():
-    start_time = time.time()  # Save the start time
-
     # authenticate when required
     if not auth.authenticated:
         print("Authenticating...")
@@ -33,10 +31,6 @@ async def fetch_user_balance():
     print("Sending request:", request)
     response = await auth.send_request(request)
     print("Received response:", response)
-
-    end_time = time.time()  # Save the end time
-    latency = end_time - start_time  # Calculate the difference, which is the latency
-    print(f"Latency for fetch_user_balance: {latency} seconds")  # Print the latency
 
     if "id" in response and response["id"] == id:
         if "code" in response and response["code"] == 0:
@@ -58,7 +52,13 @@ async def fetch_user_balance():
 @router.post("/exchanges/crypto_com/private/user_balance")
 async def get_user_balance():
     try:
+        start_time = time.time()  # Save the start time
         response = await fetch_user_balance()
+        end_time = time.time()  # Save the end time
+        latency = (
+            end_time - start_time
+        )  # Calculate the difference, which is the latency
+        print(f"Latency for get_user_balance: {latency} seconds")  # Print the latency
         return {"response": response, "latency": latency}
     except Exception as e:
         raise HTTPException(
