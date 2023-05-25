@@ -1,16 +1,17 @@
+# order.py
+
 from fastapi import APIRouter, HTTPException
 import traceback
 import os
 import json
-import redis
 import asyncio
 import time
 import logging
 from typing import Optional, List
 
 from models import Payload
-from exchanges.crypto_com.public import auth
-from .tradeguard import fetch_order_quantity
+from routes.tradeguard import fetch_order_quantity
+from redis_handler import RedisHandler
 
 router = APIRouter()
 
@@ -33,10 +34,8 @@ async def get_order(
 ):
     start_time = time.time()
     try:
-        REDIS_HOST = os.getenv("REDIS_HOST")
-        REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-        REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-        r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
+        redis_handler = RedisHandler()
+        r = redis_handler.redis_client
 
         last_signal = json.loads(r.get("last_signal"))
         action = last_signal["strategy_info"]["order"]["action"]
