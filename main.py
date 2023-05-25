@@ -1,7 +1,8 @@
+# main.py
+
 from fastapi import FastAPI
 from dotenv import load_dotenv
 import os
-import uvicorn
 
 # Include the new modules
 from exchanges.crypto_com.private import user_balance, create_order
@@ -12,7 +13,7 @@ from routes import (
     last_order,
     exchange,
     tradeguard,
-)  # Import tradeguard here
+)
 
 # Load environment variables
 load_dotenv()
@@ -34,6 +35,12 @@ app.include_router(exchange.router)
 app.include_router(user_balance.router)
 app.include_router(tradeguard.router)
 app.include_router(create_order.router)
+
+# end of main.py
+
+# run.py
+import uvicorn
+from main import app  # Import app from main.py
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
