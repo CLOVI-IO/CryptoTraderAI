@@ -8,6 +8,9 @@ from redis_handler import RedisHandler
 from contextvars import ContextVar
 from custom_exceptions import UserBalanceException
 
+# Create an instance of RedisHandler
+redis_handler = RedisHandler()
+
 auth_context = ContextVar("auth", default=None)
 
 
