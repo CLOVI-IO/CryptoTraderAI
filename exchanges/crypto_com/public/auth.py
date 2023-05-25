@@ -81,15 +81,11 @@ class Authentication:
     async def send_request(self, request: dict):
         if not self.authenticated:
             await self.authenticate()
+
+        # Added check for websocket object
+        if self.websocket is None:
+            raise Exception("Websocket is not initialized. Please check connection.")
+
         await self.websocket.send(json.dumps(request))
         response = await self.websocket.recv()
         return json.loads(response)
-
-
-# When you run python3 -m exchanges.crypto_com.public.auth,
-# it should execute the authenticate method of the Authentication
-# class and attempt to authenticate the user.
-
-#  if __name__ == "__main__":
-#    auth = Authentication()
-#    asyncio.get_event_loop().run_until_complete(auth.authenticate())
