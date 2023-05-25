@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 import os
 import json
-import time  # Add this import
+import time
 from redis_handler import RedisHandler
 from exchanges.crypto_com.private.user_balance import fetch_user_balance
 
@@ -23,7 +23,14 @@ async def fetch_order_quantity(ref_price):
 
     user_balance = json.loads(user_balance_data)
 
-    if "USD" not in user_balance["result"]:
+    # Parse accounts and find USD balance
+    usd_balance = None
+    for account in user_balance["result"]["accounts"]:
+        if account["currency"] == "USD":
+            usd_balance = account
+            break
+
+    if not usd_balance:
         raise HTTPException(
             status_code=500,
             detail=f"USD not found in user balance. Balance: {user_balance}",
@@ -31,7 +38,7 @@ async def fetch_order_quantity(ref_price):
 
     # Calculating the amount available for trading
     amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(
-        user_balance["result"]["USD"]["available"]
+        usd_balance["available"]
     )
     # Calculating order quantity
     order_quantity = amount_available_to_trade / float(ref_price)
