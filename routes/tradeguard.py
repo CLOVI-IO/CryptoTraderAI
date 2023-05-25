@@ -20,6 +20,10 @@ async def fetch_order_quantity(ref_price):
         raise HTTPException(status_code=500, detail="User balance not found in Redis.")
 
     user_balance = json.loads(user_balance_data)
+
+    if "USD" not in user_balance["result"]:
+        raise HTTPException(status_code=500, detail="USD not found in user balance.")
+
     # Calculating the amount available for trading
     amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(
         user_balance["result"]["USD"]["available"]
