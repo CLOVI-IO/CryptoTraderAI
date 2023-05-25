@@ -32,9 +32,8 @@ app.include_router(order.router)
 app.include_router(last_order.router)
 app.include_router(exchange.router)
 app.include_router(user_balance.router)
-app.include_router(tradeguard.router)  # Add tradeguard router here
-app.include_router(create_order.router)  # Add create_order router here
-
+app.include_router(tradeguard.router)
+app.include_router(create_order.router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
