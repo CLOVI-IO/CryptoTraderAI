@@ -37,7 +37,14 @@ async def get_order(
         redis_handler = RedisHandler()
         r = redis_handler.redis_client
 
-        last_signal = json.loads(r.get("last_signal"))
+        logging.debug(
+            f"Connecting to Redis: Host - {redis_handler.REDIS_HOST}, Port - {redis_handler.REDIS_PORT}"
+        )
+
+        last_signal = r.get("last_signal")
+        logging.debug(f"Received last_signal from Redis: {last_signal}")
+
+        last_signal = json.loads(last_signal)
         action = last_signal["strategy_info"]["order"]["action"]
         order_side, order_type = action.split("_")
 
