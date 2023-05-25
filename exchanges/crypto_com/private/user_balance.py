@@ -18,7 +18,7 @@ async def fetch_user_balance():
         await auth.authenticate()
 
     nonce = str(int(time.time() * 1000))
-    method = "private/get-account-summary"
+    method = "private/user-balance"
     id = int(nonce)
 
     request = {
@@ -29,24 +29,28 @@ async def fetch_user_balance():
     }
 
     print("Sending request:", request)
-    response = await auth.send_request(request)
-    print("Received response:", response)
+    await auth.send_request(request)
 
-    if "id" in response and response["id"] == id:
-        if "code" in response and response["code"] == 0:
-            # Store user balance in Redis
-            redis_handler.redis_client.set("user_balance", json.dumps(response))
-            print("Stored user balance in Redis.")
-            # Retrieve stored data for debugging purposes
-            user_balance_redis = redis_handler.redis_client.get("user_balance")
-            print(f"Retrieved from Redis: {user_balance_redis}")
-            return response
-        else:
-            raise Exception(f"Error fetching user balance. Response: {response}")
+    while True:
+        response = await auth.websocket.recv()
+        response = json.loads(response)
+        print("Received response:", response)
 
-    raise Exception(
-        f"Response id does not match request id. Request id: {id}, Response: {response}"
-    )
+        if "id" in response and response["id"] == id:
+            if "code" in response and response["code"] == 0:
+                # Store user balance in Redis
+                redis_handler.redis_client.set("user_balance", json.dumps(response))
+                print("Stored user balance in Redis.")
+                # Retrieve stored data for debugging purposes
+                user_balance_redis = redis_handler.redis_client.get("user_balance")
+                print(f"Retrieved from Redis: {user_balance_redis}")
+                return response
+            else:
+                raise Exception(f"Error fetching user balance. Response: {response}")
+
+        raise Exception(
+            f"Response id does not match request id. Request id: {id}, Response: {response}"
+        )
 
 
 @router.post("/exchanges/crypto_com/private/user_balance")
