@@ -5,29 +5,19 @@ import json
 import logging
 from exchanges.crypto_com.public.auth import Authentication
 from redis_handler import RedisHandler
-from contextvars import ContextVar
 from custom_exceptions import UserBalanceException
 
 # Create an instance of RedisHandler
 redis_handler = RedisHandler()
 
-auth_context = ContextVar("auth", default=None)
-
-
-def get_auth():
-    auth = auth_context.get()
-    if auth is None:
-        auth = Authentication()
-        auth_context.set(auth)
-    return auth
-
+auth = Authentication()
 
 router = APIRouter()
 
 logging.basicConfig(level=logging.INFO)
 
 
-async def send_user_balance_request(auth):
+async def send_user_balance_request():
     nonce = str(int(time.time() * 1000))
     method = "private/user-balance"
     id = int(nonce)
@@ -45,13 +35,12 @@ async def send_user_balance_request(auth):
 
 
 async def fetch_user_balance():
-    auth = get_auth()
     # authenticate when required
     if not auth.authenticated:
         logging.info("Authenticating...")
         await auth.authenticate()
 
-    request_id, request = await send_user_balance_request(auth)
+    request_id, request = await send_user_balance_request()
 
     while True:
         response = await auth.websocket.recv()
