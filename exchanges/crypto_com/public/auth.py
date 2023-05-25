@@ -1,4 +1,3 @@
-# public/auth.py
 import time
 import hashlib
 import hmac
@@ -12,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-async def connect():
+async def authenticate():
     environment = os.getenv("ENVIRONMENT", "SANDBOX")
     if environment == "PRODUCTION":
         uri = os.getenv("PRODUCTION_USER_API_WEBSOCKET")
@@ -41,6 +40,9 @@ async def connect():
             "nonce": nonce,
         }
 
+        # Printing last 5 characters of the API key
+        print(f"Last 5 characters of the API key: {api_key[-5:]}")
+
         # Saving the send time
         send_time = datetime.datetime.utcnow()
 
@@ -56,30 +58,19 @@ async def connect():
             if "id" in response and response["id"] == id:
                 receive_time = datetime.datetime.utcnow()
                 latency = receive_time - send_time
-                latency_seconds = latency.total_seconds()
-
-                # Create a dictionary to store the result
-                result = {}
+                print(f"Latency: {latency.total_seconds()} seconds")
 
                 if "code" in response:
                     if response["code"] == 0:
-                        result["message"] = "Authenticated successfully"
+                        return {"message": "Authenticated successfully"}
                     else:
-                        result[
-                            "message"
-                        ] = f"Authentication failed with error code: {response['code']}"
+                        return {
+                            "message": f"Authentication failed with error code: {response['code']}"
+                        }
                 else:
-                    result["message"] = "No 'code' field in the response"
-
-                # Add latency to the result
-                result["latency"] = latency_seconds
-
-                # Return the result in JSON format
-                return result
-
-            break  # Exit the loop when authentication response is received
+                    return {"message": "No 'code' field in the response"}
 
 
-# Running the connect coroutine
-result = asyncio.get_event_loop().run_until_complete(connect())
-print(json.dumps(result))
+# This line is optional. It allows the authenticate function to run when this script is run directly.
+# If you don't want this behavior, you can comment or delete this line.
+# asyncio.get_event_loop().run_until_complete(authenticate())
