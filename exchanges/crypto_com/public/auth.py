@@ -35,7 +35,26 @@ class Authentication:
             raise
 
     async def send_auth_request(self):
-        # [The rest of your code here...]
+        api_key = os.getenv("CRYPTO_COM_API_KEY")
+        secret_key = os.getenv("CRYPTO_COM_API_SECRET")
+        nonce = str(int(time.time() * 1000))
+        method = "public/auth"
+        id = int(nonce)
+
+        sig_payload = method + str(id) + api_key + nonce
+        sig = hmac.new(
+            secret_key.encode(), sig_payload.encode(), hashlib.sha256
+        ).hexdigest()
+
+        auth_request = {
+            "id": id,
+            "method": method,
+            "api_key": api_key,
+            "sig": sig,
+            "nonce": nonce,
+        }
+
+        logging.debug(f"Last 5 characters of the API key: {api_key[-5:]}")
 
         try:
             await self.websocket.send(json.dumps(auth_request))
@@ -58,7 +77,25 @@ class Authentication:
                 logging.error(f"Failed to receive the auth response: {e}")
                 continue  # Try authenticating again
 
-            # [The rest of your code here...]
+            if "id" in response and response["id"] == id:
+                if "code" in response:
+                    if response["code"] == 0:
+                        self.authenticated = True
+                        logging.info("Authenticated successfully")
+                        await asyncio.sleep(
+                            60 * 5
+                        )  # sleep for 5 minutes before re-authenticating
+                    else:
+                        self.authenticated = False
+                        logging.error(
+                            f"Authentication failed with error code: {response['code']}"
+                        )
+                else:
+                    logging.error("No 'code' field in the response")
+            else:
+                logging.error(
+                    f"Response id does not match request id. Request id: {id}, Response: {response}"
+                )
 
     async def send_request(self, request: dict):
         if not self.authenticated:
@@ -76,3 +113,9 @@ class Authentication:
         except Exception as e:
             logging.error(f"Failed to send the request or receive the response: {e}")
             raise
+
+
+if __name__ == "__main__":
+    auth = Authentication()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(auth.authenticate())
