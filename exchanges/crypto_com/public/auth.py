@@ -1,5 +1,3 @@
-# auth.py
-
 import logging
 import time
 import hashlib
@@ -12,6 +10,10 @@ import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+class AuthenticationError(Exception):
+    pass
 
 
 class Authentication:
@@ -27,57 +29,75 @@ class Authentication:
         else:
             uri = os.getenv("SANDBOX_USER_API_WEBSOCKET")
 
-        self.websocket = await websockets.connect(uri)
+        try:
+            self.websocket = await websockets.connect(uri)
+        except Exception as e:
+            logging.error(f"Failed to establish connection: {e}")
+            raise AuthenticationError("Unable to connect to the server")
 
-    async def authenticate(self):
-        if self.websocket is None:
-            await self.connect()
+    async def authenticate(self, retries=3):
+        for i in range(retries):
+            if self.websocket is None or self.websocket.closed:
+                await self.connect()
 
-        api_key = os.getenv("CRYPTO_COM_API_KEY")
-        secret_key = os.getenv("CRYPTO_COM_API_SECRET")
-        nonce = str(int(time.time() * 1000))
-        method = "public/auth"
-        id = int(nonce)
+            api_key = os.getenv("CRYPTO_COM_API_KEY")
+            secret_key = os.getenv("CRYPTO_COM_API_SECRET")
+            nonce = str(int(time.time() * 1000))
+            method = "public/auth"
+            id = int(nonce)
 
-        sig_payload = method + str(id) + api_key + nonce
-        sig = hmac.new(
-            secret_key.encode(), sig_payload.encode(), hashlib.sha256
-        ).hexdigest()
+            sig_payload = method + str(id) + api_key + nonce
+            sig = hmac.new(
+                secret_key.encode(), sig_payload.encode(), hashlib.sha256
+            ).hexdigest()
 
-        auth_request = {
-            "id": id,
-            "method": method,
-            "api_key": api_key,
-            "sig": sig,
-            "nonce": nonce,
-        }
+            auth_request = {
+                "id": id,
+                "method": method,
+                "api_key": api_key,
+                "sig": sig,
+                "nonce": nonce,
+            }
 
-        print(f"Last 5 characters of the API key: {api_key[-5:]}")
+            print(f"Last 5 characters of the API key: {api_key[-5:]}")
 
-        send_time = datetime.datetime.utcnow()
+            send_time = datetime.datetime.utcnow()
 
-        await self.websocket.send(json.dumps(auth_request))
+            try:
+                await self.websocket.send(json.dumps(auth_request))
+            except Exception as e:
+                logging.error(f"Failed to send auth request: {e}")
+                continue
 
-        while True:
-            response = await self.websocket.recv()
-            response = json.loads(response)
+            while True:
+                try:
+                    response = await self.websocket.recv()
+                except Exception as e:
+                    logging.error(f"Failed to receive auth response: {e}")
+                    break
 
-            if "id" in response and response["id"] == id:
-                receive_time = datetime.datetime.utcnow()
-                latency = receive_time - send_time
-                print(f"Latency: {latency.total_seconds()} seconds")
+                response = json.loads(response)
 
-                if "code" in response:
-                    if response["code"] == 0:
-                        self.authenticated = True
-                        return {"message": "Authenticated successfully"}
+                if "id" in response and response["id"] == id:
+                    receive_time = datetime.datetime.utcnow()
+                    latency = receive_time - send_time
+                    print(f"Latency: {latency.total_seconds()} seconds")
+
+                    if "code" in response:
+                        if response["code"] == 0:
+                            self.authenticated = True
+                            return {"message": "Authenticated successfully"}
+                        else:
+                            self.authenticated = False
+                            logging.error(
+                                f"Authentication failed with error code: {response['code']}"
+                            )
+                            break
                     else:
-                        self.authenticated = False
-                        return {
-                            "message": f"Authentication failed with error code: {response['code']}"
-                        }
-                else:
-                    return {"message": "No 'code' field in the response"}
+                        logging.error("No 'code' field in the response")
+                        break
+
+        raise AuthenticationError("Failed to authenticate after multiple attempts")
 
     async def send_request(self, request: dict):
         if not self.authenticated:
@@ -98,17 +118,9 @@ class Authentication:
                     return response
                 else:
                     logging.error(
-                        f"Response id does not match request id. Request id: {request.get('id')}, Response: {response}"
+                        f"Response id does not match request id. Request id: {request.get('id')}, Request: {request}, Response: {response}"
                     )
+                    break
         except Exception as e:
-            logging.error(f"Failed to send request: {e}")
-            raise
-
-
-# When you run python3 -m exchanges.crypto_com.public.auth,
-# it should execute the authenticate method of the Authentication
-# class and attempt to authenticate the user.
-
-#  if __name__ == "__main__":
-#    auth = Authentication()
-#    asyncio.get_event_loop().run_until_complete(auth.authenticate())
+            logging.error(f"Failed to send or receive request: {e}")
+            return None
