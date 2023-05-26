@@ -112,7 +112,7 @@ class Authentication:
             raise
 
 
-if __name__ == "__main__":
-    auth = Authentication()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(auth.authenticate())
+# if __name__ == "__main__":
+#    auth = Authentication()
+#    loop = asyncio.get_event_loop()
+#    loop.run_until_complete(auth.authenticate())
