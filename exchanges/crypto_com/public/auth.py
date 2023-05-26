@@ -1,5 +1,6 @@
 # auth.py
 
+import logging
 import time
 import hashlib
 import hmac
