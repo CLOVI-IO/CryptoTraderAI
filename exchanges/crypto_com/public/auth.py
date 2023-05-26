@@ -21,6 +21,7 @@ class Authentication:
         self.websocket = None
         self.loop = asyncio.get_event_loop()
         self.authenticated = False
+        self.pending_requests = {}
 
     async def connect(self):
         environment = os.getenv("ENVIRONMENT", "SANDBOX")
@@ -98,15 +99,6 @@ class Authentication:
                         break
 
         raise AuthenticationError("Failed to authenticate after multiple attempts")
-
-
-class Authentication:
-    def __init__(self):
-        self.websocket = None
-        self.loop = asyncio.get_event_loop()
-        self.authenticated = False
-        # Add a dictionary to store pending requests
-        self.pending_requests = {}
 
     async def send_request(self, request: dict):
         if not self.authenticated:
