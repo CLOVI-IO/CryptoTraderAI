@@ -43,8 +43,21 @@ async def fetch_user_balance():
     request_id, request = await send_user_balance_request()
 
     while True:
-        response = await auth.websocket.recv()
-        response = json.loads(response)
+        try:
+            response = await asyncio.wait_for(auth.websocket.recv(), timeout=10)
+        except asyncio.TimeoutError:
+            logging.error("Timeout error while waiting for response.")
+            raise UserBalanceException("Timeout error while waiting for response")
+        except Exception as e:
+            logging.error(f"Error while receiving response: {str(e)}")
+            raise UserBalanceException(f"Error while receiving response: {str(e)}")
+
+        try:
+            response = json.loads(response)
+        except json.JSONDecodeError:
+            logging.error(f"Invalid JSON response: {response}")
+            raise UserBalanceException("Invalid JSON response")
+
         logging.debug("Received response: %s", response)
 
         if "id" in response and response["id"] == request_id:
