@@ -82,12 +82,12 @@ async def fetch_user_balance(retries=3, delay=5):
                 }
             else:
                 logging.error(
-                    "Error fetching user balance. Request: %s, Response: %s",
-                    request,
+                    "Response id does not match request id. Expected: %s, Actual: %s, Full Response: %s",
+                    request_id,
+                    response.get("id"),
                     response,
                 )
-                raise UserBalanceException("Error fetching user balance")
-
+                raise UserBalanceException("Response id does not match request id")
         logging.error(
             "Response id does not match request id. Request id: %s, Request: %s, Response: %s",
             request_id,
