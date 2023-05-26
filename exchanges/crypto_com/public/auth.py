@@ -99,6 +99,15 @@ class Authentication:
 
         raise AuthenticationError("Failed to authenticate after multiple attempts")
 
+
+class Authentication:
+    def __init__(self):
+        self.websocket = None
+        self.loop = asyncio.get_event_loop()
+        self.authenticated = False
+        # Add a dictionary to store pending requests
+        self.pending_requests = {}
+
     async def send_request(self, request: dict):
         if not self.authenticated:
             await self.authenticate()
@@ -107,20 +116,26 @@ class Authentication:
             await self.connect()
 
         try:
+            # Store the request in the pending_requests dictionary
+            self.pending_requests[request["id"]] = request
+
             await self.websocket.send(json.dumps(request))
             while True:
                 response = await self.websocket.recv()
                 response = json.loads(response)
-                # Ignore the heartbeat messages
+
                 if response.get("method") == "public/heartbeat":
                     continue
-                elif response.get("id") == request.get("id"):
+                elif response.get("id") in self.pending_requests:
+                    # Remove the request from pending_requests
+                    del self.pending_requests[response.get("id")]
                     return response
                 else:
                     logging.error(
-                        f"Response id does not match request id. Request id: {request.get('id')}, Request: {request}, Response: {response}"
+                        f"Response id does not match any pending request id. Response: {response}"
                     )
-                    break
+                    # Continue reading the next message instead of breaking the loop
+                    continue
         except Exception as e:
             logging.error(f"Failed to send or receive request: {e}")
             return None
