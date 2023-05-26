@@ -34,13 +34,21 @@ async def send_user_balance_request():
     return id, request
 
 
-async def fetch_user_balance():
+async def fetch_user_balance(retries=3, delay=5):
     # authenticate when required
     if not auth.authenticated:
         logging.info("Authenticating...")
         await auth.authenticate()
 
-    request_id, request = await send_user_balance_request()
+    while retries > 0:
+        try:
+            request_id, request = await send_user_balance_request()
+            break  # if request sent successfully, break the loop
+        except Exception as e:
+            if retries == 1:
+                raise e  # re-raise the exception after all attempts exhausted
+            retries -= 1
+            await asyncio.sleep(delay)  # wait before next attempt
 
     while True:
         try:

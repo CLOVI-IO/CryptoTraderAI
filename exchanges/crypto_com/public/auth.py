@@ -5,7 +5,6 @@ import asyncio
 import websockets
 import json
 import os
-import datetime
 import logging
 from dotenv import load_dotenv
 
@@ -19,13 +18,16 @@ class Authentication:
         self.websocket = None
         self.loop = asyncio.get_event_loop()
         self.authenticated = False
+        self.api_key = os.getenv("CRYPTO_COM_API_KEY")
+        self.secret_key = os.getenv("CRYPTO_COM_API_SECRET")
+        self.environment = os.getenv("ENVIRONMENT", "SANDBOX")
 
     async def connect(self):
-        environment = os.getenv("ENVIRONMENT", "SANDBOX")
-        if environment == "PRODUCTION":
-            uri = os.getenv("PRODUCTION_USER_API_WEBSOCKET")
-        else:
-            uri = os.getenv("SANDBOX_USER_API_WEBSOCKET")
+        uri = (
+            os.getenv("PRODUCTION_USER_API_WEBSOCKET")
+            if self.environment == "PRODUCTION"
+            else os.getenv("SANDBOX_USER_API_WEBSOCKET")
+        )
 
         try:
             self.websocket = await websockets.connect(uri)
@@ -35,26 +37,24 @@ class Authentication:
             raise
 
     async def send_auth_request(self):
-        api_key = os.getenv("CRYPTO_COM_API_KEY")
-        secret_key = os.getenv("CRYPTO_COM_API_SECRET")
         nonce = str(int(time.time() * 1000))
         method = "public/auth"
         id = int(nonce)
 
-        sig_payload = method + str(id) + api_key + nonce
+        sig_payload = method + str(id) + self.api_key + nonce
         sig = hmac.new(
-            secret_key.encode(), sig_payload.encode(), hashlib.sha256
+            self.secret_key.encode(), sig_payload.encode(), hashlib.sha256
         ).hexdigest()
 
         auth_request = {
             "id": id,
             "method": method,
-            "api_key": api_key,
+            "api_key": self.api_key,
             "sig": sig,
             "nonce": nonce,
         }
 
-        logging.debug(f"Last 5 characters of the API key: {api_key[-5:]}")
+        logging.debug(f"Last 5 characters of the API key: {self.api_key[-5:]}")
 
         try:
             await self.websocket.send(json.dumps(auth_request))
@@ -77,28 +77,22 @@ class Authentication:
                 logging.error(f"Failed to receive the auth response: {e}")
                 continue  # Try authenticating again
 
-            if "id" in response:
-                if response["id"] == id:
-                    if "code" in response:
-                        if response["code"] == 0:
-                            self.authenticated = True
-                            logging.info("Authenticated successfully")
-                            await asyncio.sleep(
-                                60 * 5
-                            )  # sleep for 5 minutes before re-authenticating
-                        else:
-                            self.authenticated = False
-                            logging.error(
-                                f"Authentication failed with error code: {response['code']}"
-                            )
-                    else:
-                        logging.error("No 'code' field in the response")
+            if "id" in response and response["id"] == id:
+                if "code" in response and response["code"] == 0:
+                    self.authenticated = True
+                    logging.info("Authenticated successfully")
+                    await asyncio.sleep(
+                        60 * 5
+                    )  # sleep for 5 minutes before re-authenticating
                 else:
+                    self.authenticated = False
                     logging.error(
-                        f"Response id does not match request id. Request id: {id}, Response: {response}"
+                        f"Authentication failed with error code: {response['code']}"
                     )
             else:
-                logging.warning(f"Unexpected response: {response}")
+                logging.error(
+                    f"Response id does not match request id. Request id: {id}, Response: {response}"
+                )
 
     async def send_request(self, request: dict):
         if not self.authenticated:
