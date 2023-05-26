@@ -36,8 +36,6 @@ app.include_router(exchange.router)
 app.include_router(user_balance.router)
 app.include_router(tradeguard.router)
 app.include_router(create_order.router)
-app.include_router(auth.router)
-
 
 # end of main.py
 
