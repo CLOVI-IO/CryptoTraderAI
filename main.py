@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 
 # Include the new modules
+from exchanges.crypto_com.public import auth
 from exchanges.crypto_com.private import user_balance, create_order
 from routes import (
     webhook,
@@ -35,6 +36,8 @@ app.include_router(exchange.router)
 app.include_router(user_balance.router)
 app.include_router(tradeguard.router)
 app.include_router(create_order.router)
+app.include_router(auth.router)
+
 
 # end of main.py
 
