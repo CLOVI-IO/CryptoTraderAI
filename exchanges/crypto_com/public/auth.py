@@ -79,31 +79,30 @@ class Authentication:
                 else:
                     return {"message": "No 'code' field in the response"}
 
+    async def send_request(self, request: dict):
+        if not self.authenticated:
+            await self.authenticate()
 
-async def send_request(self, request: dict):
-    if not self.authenticated:
-        await self.authenticate()
+        if self.websocket.closed:
+            await self.connect()
 
-    if self.websocket.closed:
-        await self.connect()
-
-    try:
-        await self.websocket.send(json.dumps(request))
-        while True:
-            response = await self.websocket.recv()
-            response = json.loads(response)
-            # Ignore the heartbeat messages
-            if response.get("method") == "public/heartbeat":
-                continue
-            elif response.get("id") == request.get("id"):
-                return response
-            else:
-                logging.error(
-                    f"Response id does not match request id. Request id: {request.get('id')}, Response: {response}"
-                )
-    except Exception as e:
-        logging.error(f"Failed to send request: {e}")
-        raise
+        try:
+            await self.websocket.send(json.dumps(request))
+            while True:
+                response = await self.websocket.recv()
+                response = json.loads(response)
+                # Ignore the heartbeat messages
+                if response.get("method") == "public/heartbeat":
+                    continue
+                elif response.get("id") == request.get("id"):
+                    return response
+                else:
+                    logging.error(
+                        f"Response id does not match request id. Request id: {request.get('id')}, Response: {response}"
+                    )
+        except Exception as e:
+            logging.error(f"Failed to send request: {e}")
+            raise
 
 
 # When you run python3 -m exchanges.crypto_com.public.auth,
