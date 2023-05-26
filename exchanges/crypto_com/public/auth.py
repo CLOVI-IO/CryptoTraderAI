@@ -32,6 +32,7 @@ class Authentication:
         try:
             self.websocket = await websockets.connect(uri)
             logging.info("Successfully connected to the WebSocket.")
+            await asyncio.sleep(1)  # Adding a 1-second sleep after connection
         except Exception as e:
             logging.error(f"Failed to connect to the WebSocket: {e}")
             raise
@@ -64,6 +65,7 @@ class Authentication:
         return id
 
     async def authenticate(self):
+        backoff = 1
         while True:
             if self.websocket is None or self.websocket.closed:
                 await self.connect()
@@ -84,11 +86,16 @@ class Authentication:
                     await asyncio.sleep(
                         60 * 5
                     )  # sleep for 5 minutes before re-authenticating
+                    backoff = 1  # Reset backoff time
                 else:
                     self.authenticated = False
                     logging.error(
                         f"Authentication failed with error code: {response['code']}"
                     )
+                    if "code" in response and response["code"] == 10006:
+                        # Sleep to handle rate limit error and use exponential backoff
+                        await asyncio.sleep(backoff)
+                        backoff *= 2
             else:
                 logging.error(
                     f"Response id does not match request id. Request id: {id}, Response: {response}"
@@ -98,21 +105,22 @@ class Authentication:
         if not self.authenticated:
             await self.authenticate()
 
-        if self.websocket is None or self.websocket.closed:
-            raise Exception(
-                "WebSocket is not initialized or closed. Please check the connection."
-            )
+        if self.websocket.closed:
+            await self.connect()
 
         try:
             await self.websocket.send(json.dumps(request))
             response = await self.websocket.recv()
             return json.loads(response)
         except Exception as e:
-            logging.error(f"Failed to send the request or receive the response: {e}")
+            logging.error(f"Failed to send request: {e}")
             raise
 
+    def run(self):
+        self.loop.run_until_complete(self.authenticate())
+        self.loop.close()
 
-# if __name__ == "__main__":
-#    auth = Authentication()
-#    loop = asyncio.get_event_loop()
-#    loop.run_until_complete(auth.authenticate())
+
+if __name__ == "__main__":
+    auth = Authentication()
+    auth.run()
