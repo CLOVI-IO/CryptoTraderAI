@@ -1,5 +1,6 @@
-# Import required modules
-from fastapi import APIRouter, BackgroundTasks, WebSocket, HTTPException, Depends
+# create_order.py
+
+from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
 from datetime import datetime
 import asyncio
 import time
@@ -10,17 +11,12 @@ import uuid
 from redis_handler import RedisHandler
 from typing import Optional, List
 from custom_exceptions import OrderException
+from exchanges.crypto_com.public.auth import get_auth
 
-# Create a new instance of APIRouter
 router = APIRouter()
-
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
-
-# Set of connected websockets
 connected_websockets = set()
 
-# Sample order request
 request_sample = {
     "id": 1,
     "nonce": int(time.time() * 1000),
@@ -37,8 +33,10 @@ request_sample = {
     },
 }
 
-# Create an instance of RedisHandler
 redis_handler = RedisHandler()
+
+# Get the singleton instance of the Authentication class.
+auth = Depends(get_auth)
 
 
 async def fetch_order(order_request):
@@ -46,7 +44,6 @@ async def fetch_order(order_request):
     try:
         await send_order_request(order_request)
         logging.info(f"Sent order request at {datetime.utcnow().isoformat()}.")
-        # Calculate and log the latency
         end_time = datetime.utcnow()
         latency = (end_time - start_time).total_seconds()
         logging.info(f"Order request latency: {latency} seconds")
@@ -61,18 +58,15 @@ async def fetch_order(order_request):
 
 
 async def send_order_request(order_request):
-    # Add the code to connect to the WebSocket API here
-    # Send the order_request to the WebSocket API
-    # Store the WebSocket in connected_websockets
-    pass
+    await auth.send_request(order_request["method"], order_request["params"])
 
 
-async def recv_order_response(websocket, request_id):
+async def recv_order_response(request_id):
     recv_attempts = 0
     start_time = datetime.utcnow()
     while recv_attempts < 5:
         recv_attempts += 1
-        response = await websocket.receive_json()
+        response = await asyncio.wait_for(auth.websocket.recv(), timeout=10)
 
         if "id" in response and response["id"] == request_id:
             if "code" in response and response["code"] == 0:
@@ -113,26 +107,14 @@ async def recv_order_response(websocket, request_id):
 
 
 @router.post("/orders/")
-async def create_order(
-    request: Optional[dict] = None, websocket: WebSocket = Depends(state.websocket)
-):
+async def create_order(request: Optional[dict] = None):
     if request is None:
         request = request_sample
     request_id = request["id"]
 
-    await websocket.accept()
-    connected_websockets.add(websocket)
-    logging.info(
-        f"WebSocket connection established at {datetime.utcnow().isoformat()}."
-    )
-
     try:
         await fetch_order(request)
-        response = await recv_order_response(websocket, request_id)
+        response = await recv_order_response(request_id)
         return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        connected_websockets.remove(websocket)
-        await websocket.close()
-        logging.info(f"WebSocket connection closed at {datetime.utcnow().isoformat()}.")
