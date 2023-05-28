@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+# auth.py
+
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 import websockets.exceptions
 import logging
 import time
