@@ -22,6 +22,7 @@ class AuthenticationError(Exception):
     pass
 
 
+@router.get("/auth")
 class Authentication:
     def __init__(self):
         self.websocket = None
