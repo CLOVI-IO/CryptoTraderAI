@@ -32,145 +32,156 @@ class Authentication:
         self.result = None
 
     async def connect(self):
-        logging.info("Connecting...")
+        environment = os.getenv("ENVIRONMENT", "SANDBOX")
+        if environment == "PRODUCTION":
+            uri = os.getenv("PRODUCTION_USER_API_WEBSOCKET")
+        else:
+            uri = os.getenv("SANDBOX_USER_API_WEBSOCKET")
+
+        logging.debug("Trying to connect to %s", uri)
+        self.status = f"Trying to connect to {uri}"
+
         try:
-            self.websocket = await websockets.connect("wss://stream.crypto.com/v2/user")
-            logging.info("Connected.")
-        except (
-            websockets.exceptions.InvalidURI,
-            websockets.exceptions.InvalidHandshake,
-        ):
-            logging.error("Failed to connect due to an invalid URI or handshake.")
-            raise AuthenticationError(
-                "Failed to connect due to an invalid URI or handshake."
-            )
+            self.websocket = await websockets.connect(uri)
+            logging.debug("Successfully connected to %s", uri)
+            self.status = f"Successfully connected to {uri}"
         except Exception as e:
-            logging.error(f"Failed to connect: {str(e)}")
-            raise AuthenticationError(f"Failed to connect: {str(e)}")
+            logging.error(f"Failed to establish connection: {e}")
+            self.websocket = None
+            self.status = f"Failed to establish connection: {e}"
 
     async def authenticate(self, retries=3):
-        logging.info("Authenticating...")
+        for i in range(retries):
+            if self.websocket is None or self.websocket.closed:
+                await self.connect()
 
-        method = "public/auth"
-        nonce = str(int(time.time() * 1000))
-        secret_key = os.getenv("SECRET_KEY")
-        api_key = os.getenv("API_KEY")
-        sig_payload = method + nonce + api_key
-        signature = hmac.new(
-            bytes(secret_key, "latin-1"),
-            msg=bytes(sig_payload, "latin-1"),
-            digestmod=hashlib.sha256,
-        ).hexdigest()
-        id = int(nonce)
-        request = {
-            "id": id,
-            "method": method,
-            "params": {
+            if self.websocket is None:
+                raise AuthenticationError("Unable to connect to the server")
+
+            api_key = os.getenv("CRYPTO_COM_API_KEY")
+            secret_key = os.getenv("CRYPTO_COM_API_SECRET")
+
+            if not api_key or not secret_key:
+                raise AuthenticationError(
+                    "API key or secret key not found in environment variables."
+                )
+
+            nonce = str(int(time.time() * 1000))
+            method = "public/auth"
+            id = int(nonce)
+
+            sig_payload = method + str(id) + api_key + nonce
+            sig = hmac.new(
+                secret_key.encode(), sig_payload.encode(), hashlib.sha256
+            ).hexdigest()
+
+            auth_request = {
+                "id": id,
+                "method": method,
                 "api_key": api_key,
-                "sig": signature,
+                "sig": sig,
                 "nonce": nonce,
-            },
-            "nonce": nonce,
-        }
-        logging.info("Sending auth request: %s", request)
+            }
 
-        while retries > 0:
+            logging.debug(f"Auth request: {auth_request}")
+            self.status = f"Auth request: {auth_request}"
+
+            send_time = datetime.datetime.utcnow()
+
             try:
-                await self.websocket.send(json.dumps(request))
-                break  # if request sent successfully, break the loop
+                await self.websocket.send(json.dumps(auth_request))
+                logging.debug("Sent auth request")
+                self.status = "Sent auth request"
             except Exception as e:
-                if retries == 1:
-                    raise e  # re-raise the exception after all attempts exhausted
-                retries -= 1
-                await asyncio.sleep(5)  # wait before next attempt
+                logging.error(f"Failed to send auth request: {e}")
+                self.status = f"Failed to send auth request: {e}"
+                continue
 
-        while True:
-            try:
-                response = await asyncio.wait_for(self.websocket.recv(), timeout=10)
-            except asyncio.TimeoutError:
-                logging.error("Timeout error while waiting for auth response.")
-                raise AuthenticationError(
-                    "Timeout error while waiting for auth response."
-                )
-            except Exception as e:
-                logging.error(f"Error while receiving auth response: {str(e)}")
-                raise AuthenticationError(
-                    f"Error while receiving auth response: {str(e)}"
-                )
+            while True:
+                try:
+                    response = await self.websocket.recv()
+                    logging.debug(f"Received auth response: {response}")
+                    self.status = f"Received auth response: {response}"
+                except Exception as e:
+                    logging.error(f"Failed to receive auth response: {e}")
+                    self.status = f"Failed to receive auth response: {e}"
+                    break
 
-            try:
                 response = json.loads(response)
-            except json.JSONDecodeError:
-                logging.error(f"Invalid JSON auth response: {response}")
-                raise AuthenticationError("Invalid JSON auth response")
 
-            logging.debug("Received auth response: %s", response)
+                if "id" in response and response["id"] == id:
+                    receive_time = datetime.datetime.utcnow()
+                    latency = receive_time - send_time
+                    logging.debug(f"Latency: {latency.total_seconds()} seconds")
+                    self.status = f"Latency: {latency.total_seconds()} seconds"
 
-            if "id" in response and response["id"] == id:
-                if "code" in response and response["code"] == 0:
-                    logging.info("Authenticated.")
-                    self.authenticated = True
-                    return
-                else:
-                    logging.error(
-                        "Error during authentication. Expected: %s, Actual: %s, Full Response: %s",
-                        id,
-                        response.get("id"),
-                        response,
-                    )
-                    raise AuthenticationError("Error during authentication")
-            logging.error(
-                "Response id does not match request id. Request id: %s, Request: %s, Response: %s",
-                id,
-                request,
-                response,
-            )
-            # if it reached here, it means that the response id did not match the request id, which is an error
-            raise AuthenticationError("Response id does not match request id")
+                    if "code" in response:
+                        if response["code"] == 0:
+                            self.authenticated = True
+                            self.result = {"message": "Authenticated successfully"}
+                            return self.result
+                        else:
+                            self.authenticated = False
+                            logging.error(
+                                f"Authentication failed with error code: {response['code']}"
+                            )
+                            self.status = f"Authentication failed with error code: {response['code']}"
+                            break
+                    else:
+                        logging.error("No 'code' field in the response")
+                        self.status = "No 'code' field in the response"
+                        break
 
-    async def send_request(self, method, params):
+        raise AuthenticationError
+
+    async def send_request(self, method, params=None):
+        if params is None:
+            params = {}
+
+        if not self.authenticated or self.websocket is None:
+            raise AuthenticationError("Not authenticated")
+
         nonce = str(int(time.time() * 1000))
-        secret_key = os.getenv("SECRET_KEY")
-        api_key = os.getenv("API_KEY")
-        sig_payload = method + nonce + json.dumps(params, separators=(",", ":"))
-        signature = hmac.new(
-            bytes(secret_key, "latin-1"),
-            msg=bytes(sig_payload, "latin-1"),
-            digestmod=hashlib.sha256,
-        ).hexdigest()
         id = int(nonce)
         request = {
             "id": id,
             "method": method,
             "params": params,
             "nonce": nonce,
-            "sig": signature,
         }
-        logging.info("Sending request: %s", request)
-        try:
-            await self.websocket.send(json.dumps(request))
-        except Exception as e:
-            logging.error(f"Failed to send request: {str(e)}")
-            raise e
 
-    async def receive_response(self, id):
+        await self.websocket.send(json.dumps(request))
+
         while True:
-            response = await self.websocket.recv()
             try:
-                response = json.loads(response)
-            except json.JSONDecodeError:
-                logging.error(f"Invalid JSON response: {response}")
+                response = await self.websocket.recv()
+            except websockets.exceptions.ConnectionClosed:
+                raise AuthenticationError("Connection closed before receiving response")
+
+            response = json.loads(response)
+
+            # If it's a heartbeat message, ignore it and wait for the next message
+            if response.get("method") == "public/heartbeat":
                 continue
-            logging.debug("Received response: %s", response)
 
             if "id" in response and response["id"] == id:
                 return response
 
-    async def request(self, method, params):
-        if not self.websocket or self.websocket.closed:
-            await self.connect()
-        if not self.authenticated:
-            await self.authenticate()
-        await self.send_request(method, params)
-        response = await self.receive_response(id)
-        return response
+        raise AuthenticationError("Failed to receive response")
+
+
+auth = Authentication()
+
+
+@router.get("/auth")
+async def auth_endpoint(background_tasks: BackgroundTasks):
+    background_tasks.add_task(auth.authenticate)
+    return {"message": "Authentication started"}
+
+
+@router.get("/auth/status")
+async def auth_status():
+    return {
+        "status": auth.status,
+        "result": auth.result,
+    }
