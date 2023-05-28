@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Setting up logging to display debug messages
+logging.basicConfig(level=logging.DEBUG)
+
 
 class AuthenticationError(Exception):
     pass
@@ -30,8 +33,11 @@ class Authentication:
         else:
             uri = os.getenv("SANDBOX_USER_API_WEBSOCKET")
 
+        logging.debug("Trying to connect to %s", uri)
+
         try:
             self.websocket = await websockets.connect(uri)
+            logging.debug("Successfully connected to %s", uri)
         except Exception as e:
             logging.error(f"Failed to establish connection: {e}")
             self.websocket = None
@@ -63,12 +69,13 @@ class Authentication:
                 "nonce": nonce,
             }
 
-            print(f"Last 5 characters of the API key: {api_key[-5:]}")
+            logging.debug(f"Auth request: {auth_request}")
 
             send_time = datetime.datetime.utcnow()
 
             try:
                 await self.websocket.send(json.dumps(auth_request))
+                logging.debug("Sent auth request")
             except Exception as e:
                 logging.error(f"Failed to send auth request: {e}")
                 continue
@@ -76,6 +83,7 @@ class Authentication:
             while True:
                 try:
                     response = await self.websocket.recv()
+                    logging.debug(f"Received auth response: {response}")
                 except Exception as e:
                     logging.error(f"Failed to receive auth response: {e}")
                     break
@@ -85,7 +93,7 @@ class Authentication:
                 if "id" in response and response["id"] == id:
                     receive_time = datetime.datetime.utcnow()
                     latency = receive_time - send_time
-                    print(f"Latency: {latency.total_seconds()} seconds")
+                    logging.debug(f"Latency: {latency.total_seconds()} seconds")
 
                     if "code" in response:
                         if response["code"] == 0:
@@ -101,31 +109,9 @@ class Authentication:
                         logging.error("No 'code' field in the response")
                         break
 
-        raise AuthenticationError("Failed to authenticate after multiple attempts")
+        raise AuthenticationError
 
-    async def send_request(self, request: dict):
-        if not self.authenticated:
-            await self.authenticate()
 
-        if self.websocket.closed:
-            await self.connect()
-
-        try:
-            self.pending_requests[request["id"]] = request
-            await self.websocket.send(json.dumps(request))
-            while True:
-                response = await self.websocket.recv()
-                response = json.loads(response)
-
-                if response.get("method") == "public/heartbeat":
-                    continue
-                elif response.get("id") in self.pending_requests:
-                    del self.pending_requests[response.get("id")]
-                    return response
-                else:
-                    logging.error(
-                        f"Received a response with an unknown request ID: {response.get('id')}"
-                    )
-        except Exception as e:
-            logging.error(f"Failed to send or receive a request: {e}")
-            return None
+if __name__ == "__main__":
+    auth = Authentication()
+    asyncio.run(auth.authenticate())
