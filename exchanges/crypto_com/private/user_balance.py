@@ -18,8 +18,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 async def send_user_balance_request():
-    nonce = str(int(time.time() * 1000))
     method = "private/user-balance"
+    nonce = str(int(time.time() * 1000))
     id = int(nonce)
 
     request = {
@@ -30,7 +30,7 @@ async def send_user_balance_request():
     }
 
     logging.info("Sending request: %s", request)
-    await auth.send_request(request)
+    await auth.send_request(method)
     return id, request
 
 
