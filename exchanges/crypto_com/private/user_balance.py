@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 import asyncio
 import time
 import json
@@ -30,11 +30,11 @@ async def send_user_balance_request():
     }
 
     logging.info("Sending request: %s", request)
-    await auth.send_request(method)
+    await auth.send_request(method, request["params"])
     return id, request
 
 
-async def fetch_user_balance(retries=3, delay=5):
+async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
     # authenticate when required
     if not auth.authenticated:
         logging.info("Authenticating...")
@@ -50,7 +50,9 @@ async def fetch_user_balance(retries=3, delay=5):
             retries -= 1
             await asyncio.sleep(delay)  # wait before next attempt
 
-    while True:
+    recv_attempts = 0
+    while recv_attempts < max_recv_attempts:
+        recv_attempts += 1
         try:
             response = await asyncio.wait_for(auth.websocket.recv(), timeout=10)
         except asyncio.TimeoutError:
@@ -67,6 +69,10 @@ async def fetch_user_balance(retries=3, delay=5):
             raise UserBalanceException("Invalid JSON response")
 
         logging.debug("Received response: %s", response)
+
+        if "method" in response and response["method"] == "public/heartbeat":
+            logging.info("Received heartbeat, continuing to wait for actual response.")
+            continue  # ignore the heartbeat message and keep waiting for the actual response
 
         if "id" in response and response["id"] == request_id:
             if "code" in response and response["code"] == 0:
@@ -94,21 +100,21 @@ async def fetch_user_balance(retries=3, delay=5):
             request,
             response,
         )
+        # if it reached here, it means that the response id did not match the request id, which is an error
         raise UserBalanceException("Response id does not match request id")
 
-
-@router.post("/exchanges/crypto_com/private/user_balance")
-async def get_user_balance():
-    try:
-        response = await fetch_user_balance()
-        return {"response": response}
-    except UserBalanceException as e:
-        logging.error("Failed to get user balance. Error: %s", str(e))
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get user balance. Error: {str(e)}"
-        )
+    logging.error(
+        "Failed to receive the expected response after %s attempts. The last response: %s",
+        recv_attempts,
+        response,
+    )
+    # if it reached here, it means that the expected response was not received after all attempts
+    raise UserBalanceException(
+        "Failed to receive the expected response after all attempts"
+    )
 
 
-if __name__ == "__main__":
-    result = asyncio.run(fetch_user_balance())
-    print(result)
+@router.get("/user_balance")
+async def get_user_balance(background_tasks: BackgroundTasks):
+    background_tasks.add_task(fetch_user_balance)
+    return {"message": "Started fetching user balance"}
