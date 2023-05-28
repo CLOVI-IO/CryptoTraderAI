@@ -30,7 +30,7 @@ def hello_world():
 # Include the route endpoints from other files
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)
-app.include_router(order.router)
+app.include_router(auth.router)
 app.include_router(order.router)
 app.include_router(last_order.router)
 app.include_router(exchange.router)
