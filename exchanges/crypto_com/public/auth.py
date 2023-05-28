@@ -1,3 +1,4 @@
+from fastapi import APIRouter, HTTPException
 import logging
 import time
 import hashlib
@@ -10,6 +11,8 @@ import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
+
+router = APIRouter()
 
 # Setting up logging to display debug messages
 logging.basicConfig(level=logging.DEBUG)
