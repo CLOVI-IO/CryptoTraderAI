@@ -118,7 +118,7 @@ class Authentication:
 async def authenticate_route(background_tasks: BackgroundTasks):
     auth = Authentication()
     background_tasks.add_task(auth.authenticate)
-    return {"message": "Authentication started."}
+    return {"message": "Authentication initiated."}
 
 
 if __name__ == "__main__":
