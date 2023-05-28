@@ -26,12 +26,25 @@ class AuthenticationError(Exception):
 
 
 class Authentication:
+    _instance = None
+
     def __init__(self):
+        if Authentication._instance is not None:
+            raise Exception("This class is a singleton!")
+        else:
+            Authentication._instance = self
         self.websocket = None
         self.authenticated = False
         self.pending_requests = {}
         self.status = "Not started"
         self.result = None
+
+    @staticmethod
+    def getInstance():
+        """Static access method."""
+        if Authentication._instance is None:
+            Authentication()
+        return Authentication._instance
 
     async def connect(self):
         environment = os.getenv("ENVIRONMENT", "SANDBOX")
@@ -172,17 +185,20 @@ class Authentication:
         raise AuthenticationError("Failed to receive response")
 
 
-auth = Authentication()
+def get_auth() -> Authentication:
+    return Authentication.getInstance()
 
 
 @router.get("/auth")
-async def auth_endpoint(background_tasks: BackgroundTasks):
+async def auth_endpoint(
+    background_tasks: BackgroundTasks, auth: Authentication = Depends(get_auth)
+):
     background_tasks.add_task(auth.authenticate)
     return {"message": "Authentication started"}
 
 
 @router.get("/auth/status")
-async def auth_status():
+async def auth_status(auth: Authentication = Depends(get_auth)):
     return {
         "status": auth.status,
         "result": auth.result,
