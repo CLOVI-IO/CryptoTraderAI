@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 import logging
 import time
 import hashlib
@@ -22,17 +22,9 @@ class AuthenticationError(Exception):
     pass
 
 
-@router.get("/auth")
 class Authentication:
     def __init__(self):
         self.websocket = None
-        if (
-            not asyncio.get_event_loop().is_running()
-        ):  # checking if event loop is running
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
-        else:
-            self.loop = asyncio.get_event_loop()
         self.authenticated = False
         self.pending_requests = {}
 
@@ -120,6 +112,13 @@ class Authentication:
                         break
 
         raise AuthenticationError
+
+
+@router.get("/auth")
+async def authenticate_route(background_tasks: BackgroundTasks):
+    auth = Authentication()
+    background_tasks.add_task(auth.authenticate)
+    return {"message": "Authentication started."}
 
 
 if __name__ == "__main__":
