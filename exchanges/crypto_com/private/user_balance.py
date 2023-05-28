@@ -107,3 +107,8 @@ async def get_user_balance():
         raise HTTPException(
             status_code=500, detail=f"Failed to get user balance. Error: {str(e)}"
         )
+
+
+if __name__ == "__main__":
+    result = asyncio.run(fetch_user_balance())
+    print(result)

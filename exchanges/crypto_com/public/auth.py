@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+import websockets.exceptions
 import logging
 import time
 import hashlib
@@ -126,6 +127,42 @@ class Authentication:
                         break
 
         raise AuthenticationError
+
+
+async def send_request(self, method, params=None):
+    if params is None:
+        params = {}
+
+    if not self.authenticated or self.websocket is None:
+        raise AuthenticationError("Not authenticated")
+
+    nonce = str(int(time.time() * 1000))
+    id = int(nonce)
+    request = {
+        "id": id,
+        "method": method,
+        "params": params,
+        "nonce": nonce,
+    }
+
+    await self.websocket.send(json.dumps(request))
+
+    while True:
+        try:
+            response = await self.websocket.recv()
+        except websockets.exceptions.ConnectionClosed:
+            raise AuthenticationError("Connection closed before receiving response")
+
+        response = json.loads(response)
+
+        # If it's a heartbeat message, ignore it and wait for the next message
+        if response.get("method") == "public/heartbeat":
+            continue
+
+        if "id" in response and response["id"] == id:
+            return response
+
+    raise AuthenticationError("Failed to receive response")
 
 
 auth = Authentication()
