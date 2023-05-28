@@ -26,7 +26,13 @@ class AuthenticationError(Exception):
 class Authentication:
     def __init__(self):
         self.websocket = None
-        self.loop = asyncio.get_event_loop()
+        if (
+            not asyncio.get_event_loop().is_running()
+        ):  # checking if event loop is running
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+        else:
+            self.loop = asyncio.get_event_loop()
         self.authenticated = False
         self.pending_requests = {}
 
