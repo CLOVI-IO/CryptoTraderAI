@@ -1,10 +1,12 @@
-from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException
+# user_balance.py
+
+from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
 import asyncio
 import time
 import json
 import logging
 from datetime import datetime
-from exchanges.crypto_com.public.auth import Authentication
+from exchanges.crypto_com.public.auth import get_auth
 from redis_handler import RedisHandler
 from custom_exceptions import UserBalanceException
 from starlette.websockets import WebSocketDisconnect
@@ -12,7 +14,8 @@ from starlette.websockets import WebSocketDisconnect
 # Create an instance of RedisHandler
 redis_handler = RedisHandler()
 
-auth = Authentication()
+# Get the singleton instance of the Authentication class.
+auth = Depends(get_auth)
 
 router = APIRouter()
 
