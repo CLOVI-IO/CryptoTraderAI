@@ -44,7 +44,7 @@ async def send_user_balance_request():
         "nonce": nonce,
     }
 
-    logging.info("Sending request: %s", request)
+    logging.info(f"Sending request at {datetime.utcnow().isoformat()}: {request}")
     await auth.send_request(method, request["params"])
     return id, request
 
@@ -55,9 +55,9 @@ async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
         logging.info("Authenticating...")
         await auth.authenticate()
 
+    start_time = datetime.utcnow()
     while retries > 0:
         try:
-            start_time = datetime.utcnow()
             request_id, request = await send_user_balance_request()
             break  # If request sent successfully, break the loop
         except Exception as e:
@@ -141,16 +141,21 @@ async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
 
 @router.get("/user_balance")
 async def get_user_balance(background_tasks: BackgroundTasks):
+    start_time = datetime.utcnow()
     user_balance_redis = redis_handler.redis_client.get("user_balance")
+    end_time = datetime.utcnow()
+    latency = (end_time - start_time).total_seconds()
     if user_balance_redis is None:
         background_tasks.add_task(fetch_user_balance)
         return {
             "message": "Started fetching user balance",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": start_time.isoformat(),
+            "latency": f"{latency} seconds",
         }
     else:
         return {
             "message": "Successfully fetched user balance",
             "balance": json.loads(user_balance_redis),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": end_time.isoformat(),
+            "latency": f"{latency} seconds",
         }
