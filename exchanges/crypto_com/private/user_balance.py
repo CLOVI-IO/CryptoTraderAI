@@ -129,9 +129,10 @@ async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
 
 
 @router.get("/user_balance")
-async def get_user_balance():
+async def get_user_balance(background_tasks: BackgroundTasks):
     user_balance_redis = redis_handler.redis_client.get("user_balance")
     if user_balance_redis is None:
-        return {"message": "No user balance data available"}
+        background_tasks.add_task(fetch_user_balance)
+        return {"message": "Started fetching user balance"}
     else:
         return json.loads(user_balance_redis)
