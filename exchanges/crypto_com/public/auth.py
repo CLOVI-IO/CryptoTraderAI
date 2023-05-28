@@ -128,41 +128,40 @@ class Authentication:
 
         raise AuthenticationError
 
+    async def send_request(self, method, params=None):
+        if params is None:
+            params = {}
 
-async def send_request(self, method, params=None):
-    if params is None:
-        params = {}
+        if not self.authenticated or self.websocket is None:
+            raise AuthenticationError("Not authenticated")
 
-    if not self.authenticated or self.websocket is None:
-        raise AuthenticationError("Not authenticated")
+        nonce = str(int(time.time() * 1000))
+        id = int(nonce)
+        request = {
+            "id": id,
+            "method": method,
+            "params": params,
+            "nonce": nonce,
+        }
 
-    nonce = str(int(time.time() * 1000))
-    id = int(nonce)
-    request = {
-        "id": id,
-        "method": method,
-        "params": params,
-        "nonce": nonce,
-    }
+        await self.websocket.send(json.dumps(request))
 
-    await self.websocket.send(json.dumps(request))
+        while True:
+            try:
+                response = await self.websocket.recv()
+            except websockets.exceptions.ConnectionClosed:
+                raise AuthenticationError("Connection closed before receiving response")
 
-    while True:
-        try:
-            response = await self.websocket.recv()
-        except websockets.exceptions.ConnectionClosed:
-            raise AuthenticationError("Connection closed before receiving response")
+            response = json.loads(response)
 
-        response = json.loads(response)
+            # If it's a heartbeat message, ignore it and wait for the next message
+            if response.get("method") == "public/heartbeat":
+                continue
 
-        # If it's a heartbeat message, ignore it and wait for the next message
-        if response.get("method") == "public/heartbeat":
-            continue
+            if "id" in response and response["id"] == id:
+                return response
 
-        if "id" in response and response["id"] == id:
-            return response
-
-    raise AuthenticationError("Failed to receive response")
+        raise AuthenticationError("Failed to receive response")
 
 
 auth = Authentication()
