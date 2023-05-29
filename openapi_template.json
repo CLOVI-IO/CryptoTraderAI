@@ -1,0 +1,143 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "main",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Enter summary for /",
+        "description": "Enter description for /"
+      }
+    },
+    "/webhook": {
+      "get": {
+        "summary": "Enter summary for /webhook",
+        "description": "Enter description for /webhook"
+      }
+    },
+    "/viewsignal": {
+      "get": {
+        "summary": "Enter summary for /viewsignal",
+        "description": "Enter description for /viewsignal"
+      }
+    },
+    "/auth": {
+      "get": {
+        "summary": "Enter summary for /auth",
+        "description": "Enter description for /auth"
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "summary": "Enter summary for /auth/status",
+        "description": "Enter description for /auth/status"
+      }
+    },
+    "/order": {
+      "get": {
+        "summary": "Enter summary for /order",
+        "description": "Enter description for /order"
+      }
+    },
+    "/last_order": {
+      "get": {
+        "summary": "Enter summary for /last_order",
+        "description": "Enter description for /last_order"
+      }
+    },
+    "/exchange/": {
+      "get": {
+        "summary": "Enter summary for /exchange/",
+        "description": "Enter description for /exchange/"
+      }
+    },
+    "/exchange/{exchange_name}": {
+      "get": {
+        "summary": "Enter summary for /exchange/{exchange_name}",
+        "description": "Enter description for /exchange/{exchange_name}"
+      }
+    },
+    "/user_balance": {
+      "get": {
+        "summary": "Enter summary for /user_balance",
+        "description": "Enter description for /user_balance"
+      }
+    },
+    "/order_quantity/{ref_price}": {
+      "get": {
+        "summary": "Enter summary for /order_quantity/{ref_price}",
+        "description": "Enter description for /order_quantity/{ref_price}"
+      }
+    },
+    "/orders/": {
+      "get": {
+        "summary": "Enter summary for /orders/",
+        "description": "Enter description for /orders/"
+      }
+    },
+    "/ws/order": {
+      "get": {
+        "summary": "Enter summary for WebSocket endpoint /ws/order",
+        "description": "Enter description for WebSocket endpoint /ws/order"
+      }
+    },
+    "/ws/user_balance": {
+      "get": {
+        "summary": "Enter summary for WebSocket endpoint /ws/user_balance",
+        "description": "Enter description for WebSocket endpoint /ws/user_balance"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "title": "HTTPValidationError",
+        "type": "object",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "title": "ValidationError",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "loc": {
+            "title": "Location",
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            }
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
