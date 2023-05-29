@@ -169,3 +169,24 @@ async def get_order(background_tasks: BackgroundTasks):
             "timestamp": end_time.isoformat(),
             "latency": f"{latency} seconds",
         }
+
+
+# This function listens to changes in the last_signal key and triggers the fetch_order function when the key changes
+async def listen_for_signals():
+    pubsub = redis_handler.redis_client.pubsub()
+    pubsub.subscribe("__keyspace@0__:last_signal")
+    while True:
+        message = pubsub.get_message()
+        if message:
+            # Check if the message type is a change in the key (the 'set' command)
+            if message["type"] == "message" and message["data"] == b"set":
+                logging.info(
+                    f"Last signal changed at {datetime.utcnow().isoformat()}, fetching order..."
+                )
+                # Trigger the fetch_order function
+                await fetch_order()
+        await asyncio.sleep(0.1)
+
+
+# Start the listener when the module is loaded
+asyncio.create_task(listen_for_signals())
