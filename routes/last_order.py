@@ -1,46 +1,77 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-import os
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from starlette.websockets import WebSocket
 import json
 import time
 from datetime import datetime
 from redis_handler import RedisHandler
-from exchanges.crypto_com.public.auth import get_auth
-
-# Get the singleton instance of the Authentication class.
-auth = Depends(get_auth)
 
 # Create an instance of RedisHandler
 redis_handler = RedisHandler()
 
 router = APIRouter()
 
+connected_websockets = []
+
+
+@router.websocket("/ws/last_order_updates")
+async def websocket_last_order_updates(websocket: WebSocket):
+    await websocket.accept()
+    connected_websockets.append(websocket)
+    try:
+        while True:
+            last_order = json.loads(redis_handler.redis_client.get("last_order"))
+            if last_order:
+                await websocket.send_text(json.dumps(last_order))
+    except WebSocket.Disconnect:
+        connected_websockets.remove(websocket)
+
+
+async def listen_for_last_order_updates():
+    pubsub = redis_handler.redis_client.pubsub()  # create a pubsub instance
+    pubsub.subscribe("last_order_updates")  # subscribe to the channel
+    for message in pubsub.listen():  # listen for new messages
+        if message["type"] == "message":  # ignore other types of messages
+            data = message["data"]
+            if data == b"updated":  # check if the message indicates an update
+                for websocket in connected_websockets:
+                    last_order = json.loads(
+                        redis_handler.redis_client.get("last_order")
+                    )
+                    if last_order:
+                        await websocket.send_text(json.dumps(last_order))
+
 
 @router.get("/last_order")
-async def get_last_order():
+async def get_last_order(background_tasks: BackgroundTasks):
     start_time = datetime.utcnow()
-
     try:
-        last_order = redis_handler.redis_client.get("last_order")
+        last_order = json.loads(redis_handler.redis_client.get("last_order"))
         end_time = datetime.utcnow()
         latency = (end_time - start_time).total_seconds()
 
-        if last_order is not None:
-            last_order = json.loads(last_order)
-        else:
-            last_order = "Not available."
+        if last_order is None:
+            background_tasks.add_task(listen_for_last_order_updates)
+            return {
+                "message": "Started listening for last order updates",
+                "timestamp": start_time.isoformat(),
+                "latency": f"{latency} seconds",
+            }
 
         return {
-            "message": "Fetched last order",
-            "last_order": last_order,
+            "message": "Successfully fetched last order",
+            "order": last_order,
             "timestamp": end_time.isoformat(),
             "latency": f"{latency} seconds",
         }
 
     except Exception as e:
-        print(f"Failed to get last order. Error: {str(e)}")
         end_time = datetime.utcnow()
         latency = (end_time - start_time).total_seconds()
-        print(f"Timestamp: {end_time.isoformat()}, Latency: {latency} seconds")
         raise HTTPException(
-            status_code=500, detail=f"Failed to get last order: {str(e)}"
+            status_code=500,
+            detail=f"Failed to get last order: {str(e)}",
+            headers={
+                "timestamp": end_time.isoformat(),
+                "latency": f"{latency} seconds",
+            },
         )
