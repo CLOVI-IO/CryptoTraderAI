@@ -14,7 +14,12 @@ async def get_last_order():
         REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
         r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
 
-        last_order = json.loads(r.get("last_order"))
+        last_order_data = r.get("last_order")
+
+        if last_order_data is None:
+            return {"message": "No last order data available"}
+
+        last_order = json.loads(last_order_data)
 
         return last_order
 
