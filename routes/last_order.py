@@ -1,7 +1,6 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from starlette.websockets import WebSocket
 import json
-import time
 from datetime import datetime
 from redis_handler import RedisHandler
 
@@ -19,9 +18,11 @@ async def websocket_last_order_updates(websocket: WebSocket):
     connected_websockets.append(websocket)
     try:
         while True:
-            last_order = json.loads(redis_handler.redis_client.get("last_order"))
-            if last_order:
-                await websocket.send_text(json.dumps(last_order))
+            message = redis_handler.redis_client.get("last_order_updates")
+            if message == b"updated":
+                last_order = json.loads(redis_handler.redis_client.get("last_order"))
+                if last_order:
+                    await websocket.send_text(json.dumps(last_order))
     except WebSocket.Disconnect:
         connected_websockets.remove(websocket)
 
