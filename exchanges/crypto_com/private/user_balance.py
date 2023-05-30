@@ -11,6 +11,8 @@ from redis_handler import RedisHandler
 from custom_exceptions import UserBalanceException
 from starlette.websockets import WebSocketDisconnect
 
+logging.basicConfig(level=logging.INFO)
+
 # Create an instance of RedisHandler
 redis_handler = RedisHandler()
 
@@ -18,8 +20,6 @@ redis_handler = RedisHandler()
 auth = Depends(get_auth)
 
 router = APIRouter()
-
-logging.basicConfig(level=logging.INFO)
 
 connected_websockets = set()
 

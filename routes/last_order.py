@@ -46,20 +46,20 @@ async def listen_for_last_order_updates():
 async def get_last_order(background_tasks: BackgroundTasks):
     start_time = datetime.utcnow()
     output = {}  # dictionary to hold all relevant details
+
+    last_order = redis_handler.redis_client.get("last_order")
+    if not last_order:
+        output.update(
+            {
+                "message": "No last order in Redis. Starting to listen for last order updates...",
+                "timestamp": start_time.isoformat(),
+                "latency": "N/A",
+            }
+        )
+        background_tasks.add_task(listen_for_last_order_updates)
+        return output
+
     try:
-        last_order = redis_handler.redis_client.get("last_order")
-
-        if last_order is None:
-            background_tasks.add_task(listen_for_last_order_updates)
-            output.update(
-                {
-                    "message": "Started listening for last order updates",
-                    "timestamp": start_time.isoformat(),
-                    "latency": "N/A",
-                }
-            )
-            return output
-
         last_order = json.loads(last_order)  # Parse into JSON only if not None
         end_time = datetime.utcnow()
         latency = (end_time - start_time).total_seconds()
