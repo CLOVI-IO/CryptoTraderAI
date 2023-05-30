@@ -4,13 +4,13 @@ import random
 # Variables
 initial_amount = 100.0  # initial amount to start with
 transaction_percentage = 5.0 / 100  # percentage of amount used per transaction
-profit_percentage = 5.0 / 100  # average profit percentage per transaction
+profit_percentage = 3.0 / 100  # average profit percentage per transaction
 fee_percentage = 0.0750 / 100  # fee per transaction
 transactions_per_day = 20  # number of transactions per day
 goal_amount = 10000.0  # goal amount to reach
 days_in_year = 365  # number of days in a year
-success_rate = 63.0 / 100  # success rate per transaction
-loss_percentage = 3.0 / 100  # loss percentage for unsuccessful transactions
+success_rate = 82.0 / 100  # success rate per transaction
+loss_percentage = 1.5 / 100  # loss percentage for unsuccessful transactions
 
 
 # Function to calculate the transaction
