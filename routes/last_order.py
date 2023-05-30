@@ -45,36 +45,44 @@ async def listen_for_last_order_updates():
 @router.get("/last_order")
 async def get_last_order(background_tasks: BackgroundTasks):
     start_time = datetime.utcnow()
+    output = {}  # dictionary to hold all relevant details
     try:
         last_order = redis_handler.redis_client.get("last_order")
 
         if last_order is None:
             background_tasks.add_task(listen_for_last_order_updates)
-            return {
-                "message": "Started listening for last order updates",
-                "timestamp": start_time.isoformat(),
-                "latency": "N/A",
-            }
+            output.update(
+                {
+                    "message": "Started listening for last order updates",
+                    "timestamp": start_time.isoformat(),
+                    "latency": "N/A",
+                }
+            )
+            return output
 
         last_order = json.loads(last_order)  # Parse into JSON only if not None
         end_time = datetime.utcnow()
         latency = (end_time - start_time).total_seconds()
 
-        return {
-            "message": "Successfully fetched last order",
-            "order": last_order,
-            "timestamp": end_time.isoformat(),
-            "latency": f"{latency} seconds",
-        }
+        output.update(
+            {
+                "message": "Successfully fetched last order",
+                "order": last_order,
+                "timestamp": end_time.isoformat(),
+                "latency": f"{latency} seconds",
+            }
+        )
+
+        return output
 
     except Exception as e:
         end_time = datetime.utcnow()
         latency = (end_time - start_time).total_seconds()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get last order: {str(e)}",
-            headers={
+        output.update(
+            {
+                "error": f"Failed to get last order: {str(e)}",
                 "timestamp": end_time.isoformat(),
                 "latency": f"{latency} seconds",
-            },
+            }
         )
+        return output
