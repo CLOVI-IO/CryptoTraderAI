@@ -1,2 +1,0 @@
-types_hash_max_size 2048;
-types_hash_bucket_size 128;
