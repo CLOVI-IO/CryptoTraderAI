@@ -200,6 +200,6 @@ async def auth_endpoint(
 @router.get("/auth/status")
 async def auth_status(auth: Authentication = Depends(get_auth)):
     return {
-        "status": auth.status,
         "result": auth.result,
+        "status": auth.status,
     }

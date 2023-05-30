@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from starlette.websockets import WebSocket
+import logging
 import json
 from datetime import datetime
 from redis_handler import RedisHandler
@@ -8,6 +9,9 @@ from redis_handler import RedisHandler
 redis_handler = RedisHandler()
 
 router = APIRouter()
+
+# Setting up logging to display debug messages
+logging.basicConfig(level=logging.DEBUG)
 
 connected_websockets = []
 

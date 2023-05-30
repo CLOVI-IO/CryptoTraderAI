@@ -19,7 +19,7 @@ auth = Depends(get_auth)
 
 router = APIRouter()
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 connected_websockets = set()
 
