@@ -1,1 +1,2 @@
-dos2unix .platform/hooks/postdeploy/00_make_scripts_executable.sh
+#!/bin/bash
+chmod +x /var/app/current/.platform/hooks/postdeploy/*
