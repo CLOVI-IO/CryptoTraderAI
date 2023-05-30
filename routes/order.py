@@ -1,8 +1,8 @@
 # order.py
 # add last order to redis
 
-from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException
-from exchanges.crypto_com.public.auth import Authentication
+from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
+from exchanges.crypto_com.public.auth import get_auth
 import traceback
 import os
 import json
@@ -26,7 +26,9 @@ logging.basicConfig(level=logging.DEBUG)
 # Fetch trade percentage from environment variable
 TRADE_PERCENTAGE = float(os.getenv("TRADE_PERCENTAGE", 10))
 
-auth = Authentication()
+# Get the singleton instance of the Authentication class.
+auth = Depends(get_auth)
+
 connected_websockets = set()
 
 # Create an instance of RedisHandler
@@ -159,6 +161,7 @@ async def get_order(background_tasks: BackgroundTasks):
         background_tasks.add_task(fetch_order)
         return {
             "message": "Started fetching order",
+            "order": json.load(order_redis),
             "timestamp": start_time.isoformat(),
             "latency": f"{latency} seconds",
         }
