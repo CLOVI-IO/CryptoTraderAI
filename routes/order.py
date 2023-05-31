@@ -11,7 +11,6 @@ import logging
 import asyncio
 from datetime import datetime
 from typing import Optional, List
-
 from models import Payload
 from redis_handler import RedisHandler
 from custom_exceptions import OrderException
@@ -21,9 +20,6 @@ router = APIRouter()
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-
-# Fetch trade percentage from environment variable
-TRADE_PERCENTAGE = float(os.getenv("TRADE_PERCENTAGE", 10))
 
 # Get the singleton instance of the Authentication class.
 auth = Depends(get_auth)
@@ -41,27 +37,37 @@ async def websocket_order(websocket: WebSocket):
     connected_websockets.add(websocket)
     try:
         while True:
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            last_signal = Payload(**json.loads(data))
+            await send_order_request(last_signal)
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
 
 
 # Sends an order request
-async def send_order_request():
+async def send_order_request(last_signal: Payload):
     method = "private/create-order"
     nonce = str(int(time.time() * 1000))
     id = int(nonce)
+    client_oid = f"{nonce}-order"  # You can replace this with any format you want
 
     request = {
         "id": id,
         "method": method,
         "params": {
-            "quantity": 0.01,  # Hardcoded for now
+            "instrument_name": last_signal.instrument_name,
+            "side": last_signal.side,
+            "type": last_signal.type,
+            "price": str(last_signal.price),
+            "quantity": "0.01",
+            "client_oid": client_oid,
+            "exec_inst": ["POST_ONLY"],
+            "time_in_force": "FILL_OR_KILL",
         },
         "nonce": nonce,
     }
 
-    logging.info(f"Sending request at {datetime.utcnow().isoformat()}: {request}")
+    logging.debug(f"Sending request: {request}")
     await auth.send_request(method, request["params"])
     return id, request
 
@@ -96,24 +102,3 @@ async def fetch_order():
             raise OrderException("Response id does not match request id")
     else:
         raise OrderException("Response id does not match request id")
-
-
-# This function listens to changes in the last_signal key and triggers the fetch_order function when the key changes
-async def listen_for_signals():
-    pubsub = redis_handler.redis_client.pubsub()
-    pubsub.subscribe("__keyspace@0__:last_signal")
-    while True:
-        message = pubsub.get_message()
-        if message:
-            # Check if the message type is a change in the key (the 'set' command)
-            if message["type"] == "message" and message["data"] == b"set":
-                logging.info(
-                    f"Last signal changed at {datetime.utcnow().isoformat()}, fetching order..."
-                )
-                # Trigger the fetch_order function
-                await fetch_order()
-        await asyncio.sleep(0.1)
-
-
-# Start the listener when the module is loaded
-asyncio.create_task(listen_for_signals())
