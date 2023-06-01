@@ -25,9 +25,6 @@ auth = Depends(get_auth)
 
 connected_websockets = set()
 
-# Create Redis connection pool outside of the functions
-redis = aioredis.from_url("redis://localhost", decode_responses=True)
-
 
 # WebSocket endpoint
 @router.websocket("/ws/order")
@@ -43,17 +40,18 @@ async def websocket_order(websocket: WebSocket):
 
 # Function to listen for messages from the Redis channel
 async def listen_to_redis():
+    redis = await aioredis.create_redis_pool("redis://localhost")
     channel = (await redis.subscribe("last_signal"))[0]
     while await channel.wait_message():
         message = await channel.get(encoding="utf-8")
         last_signal = Payload(**json.loads(message))
         logging.debug(f"Received last_signal from Redis channel: {last_signal}")
-        await send_order_request(last_signal)
-        await fetch_order(last_signal)
+        await send_order_request(last_signal, redis)
+        await fetch_order(last_signal, redis)
 
 
 # Sends an order request
-async def send_order_request(last_signal: Payload):
+async def send_order_request(last_signal: Payload, redis):
     method = "private/create-order"
     nonce = str(int(time.time() * 1000))
     id = int(nonce)
@@ -82,13 +80,13 @@ async def send_order_request(last_signal: Payload):
 
 
 # Fetches the order
-async def fetch_order(last_signal: Payload):
+async def fetch_order(last_signal: Payload, redis):
     # Authenticate when required
     if not auth.authenticated:
         logging.info("Authenticating...")
         await auth.authenticate()
 
-    request_id, request = await send_order_request(last_signal)
+    request_id, request = await send_order_request(last_signal, redis)
 
     response = await auth.websocket.recv()
 
