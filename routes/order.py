@@ -39,6 +39,7 @@ async def websocket_order(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             last_signal = Payload(**json.loads(data))
+            logging.debug(f"Received last_signal from webhook: {last_signal}")
             await send_order_request(last_signal)
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
@@ -51,6 +52,7 @@ async def send_order_request(last_signal: Payload):
     id = int(nonce)
     client_oid = f"{nonce}-order"  # You can replace this with any format you want
 
+    # TODO: take quantity to tradeguart endpoint (send instrument_name, receive the quantity)
     request = {
         "id": id,
         "method": method,
