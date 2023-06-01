@@ -3,7 +3,6 @@
 
 from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
 from exchanges.crypto_com.public.auth import get_auth
-import traceback
 import os
 import json
 import time
@@ -12,9 +11,9 @@ import asyncio
 from datetime import datetime
 from typing import Optional, List
 from models import Payload
-from redis_handler import RedisHandler
 from custom_exceptions import OrderException
 from starlette.websockets import WebSocketDisconnect
+import aioredis
 
 router = APIRouter()
 
@@ -26,8 +25,8 @@ auth = Depends(get_auth)
 
 connected_websockets = set()
 
-# Create an instance of RedisHandler
-redis_handler = RedisHandler()
+# Create Redis connection pool outside of the functions
+redis = aioredis.from_url("redis://localhost", decode_responses=True)
 
 
 # WebSocket endpoint
@@ -36,13 +35,21 @@ async def websocket_order(websocket: WebSocket):
     await websocket.accept()
     connected_websockets.add(websocket)
     try:
-        while True:
-            data = await websocket.receive_text()
-            last_signal = Payload(**json.loads(data))
-            logging.debug(f"Received last_signal from webhook: {last_signal}")
-            await send_order_request(last_signal)
+        # Start listening to Redis in the background
+        asyncio.create_task(listen_to_redis())
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
+
+
+# Function to listen for messages from the Redis channel
+async def listen_to_redis():
+    channel = (await redis.subscribe("last_signal"))[0]
+    while await channel.wait_message():
+        message = await channel.get(encoding="utf-8")
+        last_signal = Payload(**json.loads(message))
+        logging.debug(f"Received last_signal from Redis channel: {last_signal}")
+        await send_order_request(last_signal)
+        await fetch_order(last_signal)
 
 
 # Sends an order request
@@ -50,7 +57,7 @@ async def send_order_request(last_signal: Payload):
     method = "private/create-order"
     nonce = str(int(time.time() * 1000))
     id = int(nonce)
-    client_oid = f"{nonce}-order"  # You can replace this with any format you want
+    client_oid = f"{nonce}-order"
 
     # TODO: take quantity to tradeguart endpoint (send instrument_name, receive the quantity)
     request = {
@@ -75,13 +82,13 @@ async def send_order_request(last_signal: Payload):
 
 
 # Fetches the order
-async def fetch_order():
+async def fetch_order(last_signal: Payload):
     # Authenticate when required
     if not auth.authenticated:
         logging.info("Authenticating...")
         await auth.authenticate()
 
-    request_id, request = await send_order_request()
+    request_id, request = await send_order_request(last_signal)
 
     response = await auth.websocket.recv()
 
@@ -91,15 +98,9 @@ async def fetch_order():
 
     if "id" in response and response["id"] == request_id:
         if "code" in response and response["code"] == 0:
-            # Store user balance in Redis
-            redis_handler.redis_client.set("last_order", json.dumps(response))
+            # Store order in Redis
+            await redis.set("last_order", json.dumps(response))
             logging.info(f"Stored order in Redis at {datetime.utcnow().isoformat()}.")
-            # Retrieve stored data for debugging purposes
-            order_redis = redis_handler.redis_client.get("last_order")
-            logging.debug(
-                f"Retrieved from Redis at {datetime.utcnow().isoformat()}: {order_redis}"
-            )
-            return {"message": "Successfully fetched order", "order": response}
         else:
             raise OrderException("Response id does not match request id")
     else:
