@@ -43,14 +43,19 @@ def connect_to_redis():
 redis_client = connect_to_redis()
 
 
-# WebSocket endpoint
 @router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket):
     await websocket.accept()
+    logging.debug(
+        "WebSocket accepted"
+    )  # Log that the WebSocket connection has been accepted
     connected_websockets.add(websocket)
 
     pubsub = redis_client.pubsub()  # Create a pubsub instance
     pubsub.subscribe("last_signal")  # Subscribe to the 'last_signal' channel
+    logging.debug(
+        "Subscribed to 'last_signal' channel"
+    )  # Log that the script has subscribed to the channel
 
     try:
         while True:
@@ -69,6 +74,9 @@ async def websocket_order(websocket: WebSocket):
 
             await asyncio.sleep(1)  # Sleep for 1 second if there's no new message
     except WebSocketDisconnect:
+        logging.debug(
+            "WebSocket disconnected"
+        )  # Log that the WebSocket has disconnected
         connected_websockets.remove(websocket)
 
 
