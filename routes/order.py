@@ -6,6 +6,7 @@ import time
 import redis
 import logging
 import asyncio
+import threading
 from datetime import datetime
 from typing import Optional, List
 from models import Payload
@@ -41,30 +42,31 @@ redis_client = connect_to_redis()
 @router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTasks):
     await websocket.accept()
-    logging.info("WebSocket accepted")  # Changed from debug to info level for visibility
+    logging.info("WebSocket accepted")  
     connected_websockets.add(websocket)
-
+    
     try:
-        background_tasks.add_task(listen_to_redis, websocket)
+        thread = threading.Thread(target=listen_to_redis, args=(websocket,))
+        thread.start()
     except WebSocketDisconnect:
         logging.error("WebSocket disconnected")
         connected_websockets.remove(websocket)
 
-def listen_to_redis(websocket: WebSocket):  # Changed from async to sync function
-    pubsub = redis_client.pubsub()  # Create a pubsub instance
-    pubsub.subscribe("last_signal")  # Subscribe to the 'last_signal' channel
-    logging.info("Subscribed to 'last_signal' channel")  # Changed from debug to info level for visibility
+def listen_to_redis(websocket: WebSocket):
+    pubsub = redis_client.pubsub()  
+    pubsub.subscribe("last_signal")  
+    logging.info("Subscribed to 'last_signal' channel")  
 
     while True:
         try:
             message = pubsub.get_message()
             if message and message["type"] == "message":
                 last_signal = Payload(**json.loads(message["data"]))
-                logging.info(f"Received last_signal from Redis channel: {last_signal}")  # Changed from debug to info level for visibility
-                websocket.send_text(f"Received signal from Redis: {last_signal}")  # Changed from async to sync function
+                logging.info(f"Received last_signal from Redis channel: {last_signal}")  
+                asyncio.run(websocket.send_text(f"Received signal from Redis: {last_signal}"))
         except Exception as e:
             logging.error(f"Error in listen_to_redis: {e}")
             break
 
-    pubsub.unsubscribe("last_signal")  # Unsubscribe when the client disconnects
-    logging.info("Unsubscribed from 'last_signal' channel")  # Changed from debug to info level for visibility
+    pubsub.unsubscribe("last_signal")  
+    logging.info("Unsubscribed from 'last_signal' channel")
