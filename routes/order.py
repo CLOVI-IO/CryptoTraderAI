@@ -1,44 +1,70 @@
 # order.py
-from fastapi import APIRouter, WebSocket, BackgroundTasks
-from redis import Redis
-from asyncio import Queue
-import json
+from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
 import os
+import json
+import time
+import redis
 import logging
+import asyncio
+from datetime import datetime
+from typing import Optional, List
 from models import Payload
+from exchanges.crypto_com.public.auth import get_auth
+from starlette.websockets import WebSocketDisconnect
 
 router = APIRouter()
 
+# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = os.getenv("REDIS_PORT", 6379)
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+# Get the singleton instance of the Authentication class.
+auth = get_auth()
+
+connected_websockets = set()
+
+def connect_to_redis():
+    REDIS_HOST = os.getenv("REDIS_HOST")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+
+    try:
+        r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
+        r.ping()
+        logging.info("Connected to Redis successfully!")
+        return r
+    except Exception as e:
+        logging.error(f"Error connecting to Redis: {str(e)}")
+        return None
+
+redis_client = connect_to_redis()
 
 @router.websocket("/ws/order")
-async def websocket_endpoint(websocket: WebSocket, background_tasks: BackgroundTasks):
-    # Connect to Redis.
-    redis = Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
-    pubsub = redis.pubsub(ignore_subscribe_messages=True)
-    pubsub.subscribe("last_signal")
-
-    # Create a queue for messages.
-    queue = Queue()
-
-    # Add a background task for reading from Redis and putting messages into the queue.
-    background_tasks.add_task(read_from_redis, pubsub, queue)
-
-    # Accept the WebSocket connection.
+async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTasks):
     await websocket.accept()
+    logging.info("WebSocket accepted")  # Changed from debug to info level for visibility
+    connected_websockets.add(websocket)
+    
+    try:
+        background_tasks.add_task(listen_to_redis, websocket)
+    except WebSocketDisconnect:
+        logging.error("WebSocket disconnected")
+        connected_websockets.remove(websocket)
 
-    # Keep reading messages from the queue and sending them via WebSocket.
+async def listen_to_redis(websocket: WebSocket):
+    pubsub = redis_client.pubsub()  # Create a pubsub instance
+    pubsub.subscribe("last_signal")  # Subscribe to the 'last_signal' channel
+    logging.info("Subscribed to 'last_signal' channel")  # Changed from debug to info level for visibility
+
     while True:
-        message = await queue.get()
-        await websocket.send_text(f"Received signal from Redis: {message}")
+        try:
+            message = pubsub.get_message()
+            if message and message["type"] == "message":
+                last_signal = Payload(**json.loads(message["data"]))
+                logging.info(f"Received last_signal from Redis channel: {last_signal}")  # Changed from debug to info level for visibility
+                await websocket.send_text(f"Received signal from Redis: {last_signal}")
+        except Exception as e:
+            logging.error(f"Error in listen_to_redis: {e}")
+            break
 
-def read_from_redis(pubsub, queue):
-    for message in pubsub.listen():
-        if message["type"] == "message":
-            last_signal = Payload(**json.loads(message["data"]))
-            logging.debug(f"Received last_signal from Redis channel: {last_signal}")
-            queue.put_nowait(str(last_signal))
+    pubsub.unsubscribe("last_signal")  # Unsubscribe when the client disconnects
+    logging.info("Unsubscribed from 'last_signal' channel")  # Changed from debug to info level for visibility
