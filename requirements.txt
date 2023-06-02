@@ -10,4 +10,3 @@ redis==4.5.5
 pydantic==1.10.8
 six==1.16.0
 websockets==11.0.3
-aioredis==2.0.1
