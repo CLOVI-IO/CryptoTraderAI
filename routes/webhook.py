@@ -23,7 +23,7 @@ async def webhook(request: Request):
     redis_handler = RedisHandler()  # create RedisHandler instance
     redis_client = redis_handler.redis_client  # access redis client from RedisHandler
     if redis_client is None:
-        raise HTTPException(status_code=500, detail="Failed to connect to Redis")
+        raise HTTPException(status_code=500, detail="Webhook endpoint: Failed to connect to Redis")
 
     try:
         content_type = request.headers.get("content-type", "")
@@ -38,12 +38,12 @@ async def webhook(request: Request):
 
         # Set the payload to a key
         redis_client.set("last_signal", json.dumps(payload))
-        print(f"Set 'last_signal' to Redis: {json.dumps(payload)}")
+        print(f"Webhook endpoint: Set 'last_signal' to Redis: {json.dumps(payload)}")
 
         return {"status": "ok"}
 
     except Exception as e:
-        print(f"Failed to set signal: {e}")
+        print(f"Webhook endpoint: Failed to set signal: {e}")
         raise HTTPException(
-            status_code=500, detail="An error occurred while setting the signal"
+            status_code=500, detail="Webhook endpoint: An error occurred while setting the signal"
         )
