@@ -3,8 +3,8 @@ from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv, find_dotenv
 import os
 import json
-import redis
 import logging
+from redis_handler import RedisHandler  # import RedisHandler
 
 
 router = APIRouter()
@@ -12,21 +12,6 @@ router = APIRouter()
 logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv(find_dotenv())
-
-
-def connect_to_redis():
-    REDIS_HOST = os.getenv("REDIS_HOST")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-
-    try:
-        r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
-        r.ping()
-        print("Connected to Redis successfully!")
-        return r
-    except Exception as e:
-        print(f"Error connecting to Redis: {str(e)}")
-        return None
 
 
 @router.post("/webhook")
@@ -37,7 +22,8 @@ async def webhook(request: Request):
     if client_host not in tradingview_ips:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    redis_client = connect_to_redis()
+    redis_handler = RedisHandler()  # create RedisHandler instance
+    redis_client = redis_handler.redis_client  # access redis client from RedisHandler
     if redis_client is None:
         raise HTTPException(status_code=500, detail="Failed to connect to Redis")
 
