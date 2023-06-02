@@ -36,8 +36,10 @@ async def webhook(request: Request):
         else:
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
-        # Set the payload to a key
+        # Set the payload to a key and publish the change
         redis_client.set("last_signal", json.dumps(payload))
+        redis_client.publish('last_signal', json.dumps(payload))  # This line publishes the change
+
         print(f"Webhook endpoint: Set 'last_signal' to Redis: {json.dumps(payload)}")
 
         return {"status": "ok"}
