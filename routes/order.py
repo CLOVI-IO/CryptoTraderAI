@@ -43,14 +43,14 @@ async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTask
     await websocket.accept()
     logging.info("WebSocket accepted")  # Changed from debug to info level for visibility
     connected_websockets.add(websocket)
-    
+
     try:
         background_tasks.add_task(listen_to_redis, websocket)
     except WebSocketDisconnect:
         logging.error("WebSocket disconnected")
         connected_websockets.remove(websocket)
 
-async def listen_to_redis(websocket: WebSocket):
+def listen_to_redis(websocket: WebSocket):  # Changed from async to sync function
     pubsub = redis_client.pubsub()  # Create a pubsub instance
     pubsub.subscribe("last_signal")  # Subscribe to the 'last_signal' channel
     logging.info("Subscribed to 'last_signal' channel")  # Changed from debug to info level for visibility
@@ -61,7 +61,7 @@ async def listen_to_redis(websocket: WebSocket):
             if message and message["type"] == "message":
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.info(f"Received last_signal from Redis channel: {last_signal}")  # Changed from debug to info level for visibility
-                await websocket.send_text(f"Received signal from Redis: {last_signal}")
+                websocket.send_text(f"Received signal from Redis: {last_signal}")  # Changed from async to sync function
         except Exception as e:
             logging.error(f"Error in listen_to_redis: {e}")
             break

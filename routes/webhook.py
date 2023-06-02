@@ -36,15 +36,14 @@ async def webhook(request: Request):
         else:
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
-        # Set the payload to a key and also publish it
-        redis_client.set("last_signal", json.dumps(payload))
+        # Publish to Redis
         redis_client.publish("last_signal", json.dumps(payload))
-        print(f"Webhook endpoint: Set and published 'last_signal' to Redis: {json.dumps(payload)}")
+        print(f"Webhook endpoint: Published 'last_signal' to Redis: {json.dumps(payload)}")
 
         return {"status": "ok"}
 
     except Exception as e:
-        print(f"Webhook endpoint: Failed to set and publish signal: {e}")
+        print(f"Webhook endpoint: Failed to publish signal: {e}")
         raise HTTPException(
-            status_code=500, detail="Webhook endpoint: An error occurred while setting and publishing the signal"
+            status_code=500, detail="Webhook endpoint: An error occurred while publishing the signal"
         )
