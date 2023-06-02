@@ -58,6 +58,9 @@ async def websocket_order(websocket: WebSocket):
                 pubsub.get_message()
             )  # Get new messages from the 'last_signal' channel
 
+            # Log that a message has been retrieved from the Redis channel
+            logging.debug("Retrieved message from Redis channel")
+
             if message and message["type"] == "message":
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.debug(f"Received last_signal from Redis channel: {last_signal}")
