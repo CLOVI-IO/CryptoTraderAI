@@ -1,5 +1,4 @@
 # order.py
-# add last order to redis
 
 from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
 from exchanges.crypto_com.public.auth import get_auth
@@ -13,7 +12,6 @@ from typing import Optional, List
 from models import Payload
 from custom_exceptions import OrderException
 from starlette.websockets import WebSocketDisconnect
-import aioredis
 
 router = APIRouter()
 
@@ -32,26 +30,13 @@ async def websocket_order(websocket: WebSocket):
     await websocket.accept()
     connected_websockets.add(websocket)
     try:
-        # Start listening to Redis in the background
-        asyncio.create_task(listen_to_redis())
+        pass  # TODO: Implement the WebSocket logic here
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
 
 
-# Function to listen for messages from the Redis channel
-async def listen_to_redis():
-    redis = await aioredis.create_redis_pool("redis://localhost")
-    channel = (await redis.subscribe("last_signal"))[0]
-    while await channel.wait_message():
-        message = await channel.get(encoding="utf-8")
-        last_signal = Payload(**json.loads(message))
-        logging.debug(f"Received last_signal from Redis channel: {last_signal}")
-        await send_order_request(last_signal, redis)
-        await fetch_order(last_signal, redis)
-
-
 # Sends an order request
-async def send_order_request(last_signal: Payload, redis):
+async def send_order_request(last_signal: Payload):
     method = "private/create-order"
     nonce = str(int(time.time() * 1000))
     id = int(nonce)
@@ -80,13 +65,13 @@ async def send_order_request(last_signal: Payload, redis):
 
 
 # Fetches the order
-async def fetch_order(last_signal: Payload, redis):
+async def fetch_order(last_signal: Payload):
     # Authenticate when required
     if not auth.authenticated:
         logging.info("Authenticating...")
         await auth.authenticate()
 
-    request_id, request = await send_order_request(last_signal, redis)
+    request_id, request = await send_order_request(last_signal)
 
     response = await auth.websocket.recv()
 
@@ -96,9 +81,7 @@ async def fetch_order(last_signal: Payload, redis):
 
     if "id" in response and response["id"] == request_id:
         if "code" in response and response["code"] == 0:
-            # Store order in Redis
-            await redis.set("last_order", json.dumps(response))
-            logging.info(f"Stored order in Redis at {datetime.utcnow().isoformat()}.")
+            logging.info(f"Order processed at {datetime.utcnow().isoformat()}.")
         else:
             raise OrderException("Response id does not match request id")
     else:
