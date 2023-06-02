@@ -6,13 +6,11 @@ import json
 import logging
 from redis_handler import RedisHandler  # import RedisHandler
 
-
 router = APIRouter()
 
 logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv(find_dotenv())
-
 
 @router.post("/webhook")
 async def webhook(request: Request):
@@ -38,14 +36,14 @@ async def webhook(request: Request):
         else:
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
-        # Publish the payload to a channel
-        redis_client.publish("last_signal", json.dumps(payload))
-        print(f"Published 'last_signal' to Redis: {json.dumps(payload)}")
+        # Set the payload to a key
+        redis_client.set("last_signal", json.dumps(payload))
+        print(f"Set 'last_signal' to Redis: {json.dumps(payload)}")
 
         return {"status": "ok"}
 
     except Exception as e:
-        print(f"Failed to publish signal: {e}")
+        print(f"Failed to set signal: {e}")
         raise HTTPException(
-            status_code=500, detail="An error occurred while publishing the signal"
+            status_code=500, detail="An error occurred while setting the signal"
         )
