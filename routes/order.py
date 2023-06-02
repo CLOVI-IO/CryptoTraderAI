@@ -5,6 +5,7 @@ from exchanges.crypto_com.public.auth import get_auth
 import os
 import json
 import time
+import redis
 import logging
 import asyncio
 from datetime import datetime
@@ -24,13 +25,40 @@ auth = Depends(get_auth)
 connected_websockets = set()
 
 
+def connect_to_redis():
+    REDIS_HOST = os.getenv("REDIS_HOST")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+
+    try:
+        r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
+        r.ping()
+        logging.info("Connected to Redis successfully!")
+        return r
+    except Exception as e:
+        logging.error(f"Error connecting to Redis: {str(e)}")
+        return None
+
+
+redis_client = connect_to_redis()
+
+
 # WebSocket endpoint
 @router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket):
     await websocket.accept()
     connected_websockets.add(websocket)
     try:
-        pass  # TODO: Implement the WebSocket logic here
+        while True:
+            # Listen to the 'last_signal' channel for incoming messages
+            message = redis_client.get("last_signal")
+            if message:
+                last_signal = Payload(**json.loads(message))
+                logging.debug(f"Received last_signal from Redis channel: {last_signal}")
+                await send_order_request(last_signal)
+                await fetch_order(last_signal)
+            else:
+                await asyncio.sleep(1)  # Sleep for 1 second if there's no new message
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
 
