@@ -48,17 +48,23 @@ redis_client = connect_to_redis()
 async def websocket_order(websocket: WebSocket):
     await websocket.accept()
     connected_websockets.add(websocket)
+
+    pubsub = redis_client.pubsub()  # Create a pubsub instance
+    pubsub.subscribe("last_signal")  # Subscribe to the 'last_signal' channel
+
     try:
         while True:
-            # Listen to the 'last_signal' channel for incoming messages
-            message = redis_client.get("last_signal")
-            if message:
-                last_signal = Payload(**json.loads(message))
+            message = (
+                pubsub.get_message()
+            )  # Get new messages from the 'last_signal' channel
+
+            if message and message["type"] == "message":
+                last_signal = Payload(**json.loads(message["data"]))
                 logging.debug(f"Received last_signal from Redis channel: {last_signal}")
                 await send_order_request(last_signal)
                 await fetch_order(last_signal)
-            else:
-                await asyncio.sleep(1)  # Sleep for 1 second if there's no new message
+
+            await asyncio.sleep(1)  # Sleep for 1 second if there's no new message
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
 
