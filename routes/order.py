@@ -20,10 +20,9 @@ router = APIRouter()
 logging.basicConfig(level=logging.DEBUG)
 
 # Get the singleton instance of the Authentication class.
-auth = Depends(get_auth)
+auth = get_auth()
 
 connected_websockets = set()
-
 
 def connect_to_redis():
     REDIS_HOST = os.getenv("REDIS_HOST")
@@ -39,55 +38,44 @@ def connect_to_redis():
         logging.error(f"Error connecting to Redis: {str(e)}")
         return None
 
-
 redis_client = connect_to_redis()
 
-
 @router.websocket("/ws/order")
-async def websocket_order(websocket: WebSocket):
+async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTasks):
     await websocket.accept()
-    logging.debug(
-        "WebSocket accepted"
-    )  # Log that the WebSocket connection has been accepted
+    logging.debug("WebSocket accepted")
     connected_websockets.add(websocket)
+    
+    background_tasks.add_task(listen_to_redis, websocket)
+    
 
+async def listen_to_redis(websocket: WebSocket):
     pubsub = redis_client.pubsub()  # Create a pubsub instance
     pubsub.subscribe("last_signal")  # Subscribe to the 'last_signal' channel
-    logging.debug(
-        "Subscribed to 'last_signal' channel"
-    )  # Log that the script has subscribed to the channel
+    logging.debug("Subscribed to 'last_signal' channel")
+    
+    while True:
+        message = pubsub.get_message()
+        if message and message["type"] == "message":
+            last_signal = Payload(**json.loads(message["data"]))
+            logging.debug(f"Received last_signal from Redis channel: {last_signal}")
+            await send_order_request(last_signal, websocket)
+            await fetch_order(last_signal, websocket)
 
-    try:
-        while True:
-            message = (
-                pubsub.get_message()
-            )  # Get new messages from the 'last_signal' channel
-
-            # Log that a message has been retrieved from the Redis channel
-            logging.debug("Retrieved message from Redis channel")
-
-            if message and message["type"] == "message":
-                last_signal = Payload(**json.loads(message["data"]))
-                logging.debug(f"Received last_signal from Redis channel: {last_signal}")
-                await send_order_request(last_signal)
-                await fetch_order(last_signal)
-
-            await asyncio.sleep(1)  # Sleep for 1 second if there's no new message
-    except WebSocketDisconnect:
-        logging.debug(
-            "WebSocket disconnected"
-        )  # Log that the WebSocket has disconnected
-        connected_websockets.remove(websocket)
-
+        await asyncio.sleep(1)  # Sleep for 1 second if there's no new message
 
 # Sends an order request
-async def send_order_request(last_signal: Payload):
+async def send_order_request(last_signal: Payload, websocket: WebSocket):
+    # Authenticate when required
+    if not auth.authenticated:
+        logging.info("Authenticating...")
+        await auth.authenticate(websocket)
+    
     method = "private/create-order"
     nonce = str(int(time.time() * 1000))
     id = int(nonce)
     client_oid = f"{nonce}-order"
 
-    # TODO: take quantity to tradeguart endpoint (send instrument_name, receive the quantity)
     request = {
         "id": id,
         "method": method,
@@ -105,21 +93,14 @@ async def send_order_request(last_signal: Payload):
     }
 
     logging.debug(f"Sending request: {request}")
-    await auth.send_request(method, request["params"])
+    await auth.send_request(method, request["params"], websocket)
     return id, request
 
-
 # Fetches the order
-async def fetch_order(last_signal: Payload):
-    # Authenticate when required
-    if not auth.authenticated:
-        logging.info("Authenticating...")
-        await auth.authenticate()
-
-    request_id, request = await send_order_request(last_signal)
+async def fetch_order(last_signal: Payload, websocket: WebSocket):
+    request_id, request = await send_order_request(last_signal, websocket)
 
     response = await auth.websocket.recv()
-
     response = json.loads(response)
 
     logging.debug(f"Received response at {datetime.utcnow().isoformat()}: {response}")
