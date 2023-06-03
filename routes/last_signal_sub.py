@@ -1,11 +1,14 @@
 # redis_pub_sub.py
 import asyncio
 from fastapi import APIRouter
-from starlette.responses import EventSourceResponse
 import os
 import json
 import redis
 import logging
+from fastapi.responses import EventSourceResponse
+from fastapi import FastAPI
+
+app = FastAPI()
 
 router = APIRouter()
 
