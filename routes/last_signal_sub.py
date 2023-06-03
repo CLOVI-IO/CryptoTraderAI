@@ -1,6 +1,6 @@
 # redis_pub_sub.py
 import asyncio
-from fastapi import FastAPI, APIRouter
+from fastapi import APIRouter
 from starlette.responses import EventSourceResponse
 import os
 import json
@@ -8,8 +8,6 @@ import redis
 import logging
 
 router = APIRouter()
-
-app = FastAPI()
 
 def connect_to_redis():
     REDIS_HOST = os.getenv("REDIS_HOST")
