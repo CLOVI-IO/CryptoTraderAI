@@ -58,6 +58,7 @@ async def listen_to_redis(websocket: WebSocket):
         while True:
             message = pubsub.get_message()
             if message and message["type"] == "message":
+                logging.debug(f"Payload from Redis channel: {message}")  # Added debug log here
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.info(f"Received last_signal from Redis channel: {last_signal}")  
                 await websocket.send_text(f"Received signal from Redis: {last_signal}")
@@ -68,20 +69,15 @@ async def listen_to_redis(websocket: WebSocket):
         pubsub.unsubscribe("last_signal")  
         logging.info("Unsubscribed from 'last_signal' channel")
 
-
-
-
 def read_last_signal():
     try:
         last_signal = redis_client.get("last_signal")
         if last_signal is None:
             logging.info("No last_signal value in Redis.")
         else:
-            logging.info(f"Read last_signal from Redis: {last_signal}")
+            logging.info(f"Read last_signal from Redis: {last_signal.decode()}")  # Decoding bytes to string
     except Exception as e:
         logging.error(f"Error reading last_signal from Redis: {str(e)}")
-
-
 
 read_last_signal()
 logging.info("Order endpoint ready") 
