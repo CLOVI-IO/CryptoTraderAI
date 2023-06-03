@@ -70,6 +70,7 @@ async def listen_to_redis(websocket: WebSocket):
 
 
 
+
 def read_last_signal():
     try:
         last_signal = redis_client.get("last_signal")
