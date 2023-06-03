@@ -1,5 +1,5 @@
 # order.py
-from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
+from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends, FastAPI
 import os
 import json
 import time
@@ -10,6 +10,7 @@ from typing import Optional, List
 from models import Payload
 from exchanges.crypto_com.public.auth import get_auth
 from starlette.websockets import WebSocketDisconnect
+from websockets import connect as ws_connect
 
 router = APIRouter()
 
@@ -37,7 +38,7 @@ def connect_to_redis():
 
 redis_client = connect_to_redis()
 
-@router.websocket("ws://localhost:8000/ws/order")
+@router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTasks):
     await websocket.accept()
     logging.info("WebSocket accepted")
@@ -68,7 +69,6 @@ async def listen_to_redis(websocket: WebSocket):
     pubsub.unsubscribe("last_signal")  
     logging.info("Unsubscribed from 'last_signal' channel")
 
-
 def read_last_signal():
     try:
         last_signal = redis_client.get("last_signal")
@@ -79,7 +79,16 @@ def read_last_signal():
     except Exception as e:
         logging.error(f"Error reading last_signal from Redis: {str(e)}")
 
+app = FastAPI()
 
+@app.on_event("startup")
+async def startup_event():
+    async with ws_connect("ws://localhost:8000/ws/order") as websocket:
+        await websocket.send("Hello world!")
+        response = await websocket.recv()
+        print(f"Received: {response}")
+
+app.include_router(router)
 
 read_last_signal()
 logging.info("Order endpoint ready") 
