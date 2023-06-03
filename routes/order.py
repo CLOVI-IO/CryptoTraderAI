@@ -1,15 +1,13 @@
 # order.py
-from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
+from fastapi import APIRouter, WebSocket, BackgroundTasks
+from starlette.websockets import WebSocketDisconnect
 import os
 import json
 import time
 import redis
 import logging
-from datetime import datetime
-from typing import Optional, List
 from models import Payload
 from exchanges.crypto_com.public.auth import get_auth
-from starlette.websockets import WebSocketDisconnect
 
 router = APIRouter()
 
@@ -37,17 +35,29 @@ def connect_to_redis():
 
 redis_client = connect_to_redis()
 
+RETRY_LIMIT = 3  # Maximum number of reconnection attempts
+
 @router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTasks):
     await websocket.accept()
     logging.info("WebSocket accepted")
     connected_websockets.add(websocket)
 
-    try:
-        background_tasks.add_task(listen_to_redis, websocket)
-    except WebSocketDisconnect:
-        logging.error("WebSocket disconnected")
-        connected_websockets.remove(websocket)
+    retry_count = 0
+    while retry_count < RETRY_LIMIT:
+        try:
+            background_tasks.add_task(listen_to_redis, websocket)
+            retry_count = 0  # Reset the counter if the connection is successful
+        except WebSocketDisconnect:
+            logging.error("WebSocket disconnected. Attempting to reconnect...")
+            connected_websockets.remove(websocket)
+            retry_count += 1
+            time.sleep(5)  # Wait for 5 seconds before retrying
+        except Exception as e:
+            logging.error(f"Unexpected error: {str(e)}")
+            break
+    if retry_count == RETRY_LIMIT:
+        logging.error("Maximum retry attempts reached. Connection failed.")
 
 async def listen_to_redis(websocket: WebSocket):
     pubsub = redis_client.pubsub()  
@@ -61,7 +71,7 @@ async def listen_to_redis(websocket: WebSocket):
                 logging.debug(f"Payload from Redis channel: {message}")  # Added debug log here
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.info(f"Received last_signal from Redis channel: {last_signal}")  
-                await websocket.send_text(f"Received signal from Redis: {last_signal}")
+                await websocket.send_text(json.dumps(last_signal.dict()))  # Sending as JSON string
                 logging.debug(f"Sent signal to client: {last_signal}")
     except Exception as e:
         logging.error(f"Error in listen_to_redis: {e}")
@@ -80,4 +90,4 @@ def read_last_signal():
         logging.error(f"Error reading last_signal from Redis: {str(e)}")
 
 read_last_signal()
-logging.info("Order endpoint ready") 
+logging.info("Order endpoint ready")
