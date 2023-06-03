@@ -37,7 +37,7 @@ def connect_to_redis():
 
 redis_client = connect_to_redis()
 
-@router.websocket("ws://ai.clovi.io/ws/order")
+@router.websocket("ws://localhost:8000/ws/order")
 async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTasks):
     await websocket.accept()
     logging.info("WebSocket accepted")
