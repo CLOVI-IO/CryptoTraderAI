@@ -70,3 +70,5 @@ def listen_to_redis(websocket: WebSocket):
 
     pubsub.unsubscribe("last_signal")  
     logging.info("Unsubscribed from 'last_signal' channel")
+
+logging.info("Order endpoint ready")  # Add this line
