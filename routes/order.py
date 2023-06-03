@@ -54,20 +54,21 @@ async def listen_to_redis(websocket: WebSocket):
     pubsub.subscribe("last_signal")  
     logging.info("Subscribed to 'last_signal' channel")  
 
-    while True:
-        try:
+    try:
+        while True:
             message = pubsub.get_message()
             if message and message["type"] == "message":
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.info(f"Received last_signal from Redis channel: {last_signal}")  
                 await websocket.send_text(f"Received signal from Redis: {last_signal}")
-                logging.debug(f"Sent signal to client: {last_signal}")  # Added debug log here
-        except Exception as e:
-            logging.error(f"Error in listen_to_redis: {e}")
-            break
-        finally:
-            pubsub.unsubscribe("last_signal")  
-            logging.info("Unsubscribed from 'last_signal' channel")
+                logging.debug(f"Sent signal to client: {last_signal}")
+    except Exception as e:
+        logging.error(f"Error in listen_to_redis: {e}")
+    finally:
+        pubsub.unsubscribe("last_signal")  
+        logging.info("Unsubscribed from 'last_signal' channel")
+
+
 
 def read_last_signal():
     try:
