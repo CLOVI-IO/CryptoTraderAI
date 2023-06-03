@@ -71,4 +71,19 @@ def listen_to_redis(websocket: WebSocket):
     pubsub.unsubscribe("last_signal")  
     logging.info("Unsubscribed from 'last_signal' channel")
 
-logging.info("Order endpoint ready")  # Add this line
+
+def read_last_signal():
+    try:
+        last_signal = redis_client.get("last_signal")
+        if last_signal is None:
+            logging.info("No last_signal value in Redis.")
+        else:
+            logging.info(f"Read last_signal from Redis: {last_signal}")
+    except Exception as e:
+        logging.error(f"Error reading last_signal from Redis: {str(e)}")
+
+
+
+read_last_signal()
+logging.info("Order endpoint ready") 
+
