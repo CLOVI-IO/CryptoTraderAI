@@ -14,6 +14,7 @@ from routes import (
     last_order,
     exchange,
     tradeguard,
+    last_signal_sub,
 )
 
 # Load environment variables
@@ -37,6 +38,9 @@ app.include_router(exchange.router)
 app.include_router(user_balance.router)
 app.include_router(tradeguard.router)
 app.include_router(create_order.router)
+app.include_router(last_signal_sub.router)
+
+
 
 # end of main.py
 
