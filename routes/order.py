@@ -37,7 +37,7 @@ def connect_to_redis():
 
 redis_client = connect_to_redis()
 
-@router.websocket("ws://TraderAI-API-env.eba-qbng43xv.ap-southeast-1.elasticbeanstalk.com/ws/order")
+@router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket, background_tasks: BackgroundTasks):
     await websocket.accept()
     logging.info("WebSocket accepted")
@@ -61,13 +61,13 @@ async def listen_to_redis(websocket: WebSocket):
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.info(f"Received last_signal from Redis channel: {last_signal}")  
                 await websocket.send_text(f"Received signal from Redis: {last_signal}")
+                logging.debug(f"Sent signal to client: {last_signal}")  # Added debug log here
         except Exception as e:
             logging.error(f"Error in listen_to_redis: {e}")
             break
-
-    pubsub.unsubscribe("last_signal")  
-    logging.info("Unsubscribed from 'last_signal' channel")
-
+        finally:
+            pubsub.unsubscribe("last_signal")  
+            logging.info("Unsubscribed from 'last_signal' channel")
 
 def read_last_signal():
     try:
