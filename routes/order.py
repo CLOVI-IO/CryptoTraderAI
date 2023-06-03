@@ -68,9 +68,9 @@ async def listen_to_redis(websocket: WebSocket):
         while True:
             message = pubsub.get_message()
             if message and message["type"] == "message":
-                logging.debug(f"Payload from Redis channel: {message}")  # Added debug log here
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.info(f"Received last_signal from Redis channel: {last_signal}")  
+                await send_to_order_endpoint(last_signal)  # Send data to create_order endpoint
                 await websocket.send_text(json.dumps(last_signal.dict()))  # Sending as JSON string
                 logging.debug(f"Sent signal to client: {last_signal}")
     except Exception as e:
@@ -78,6 +78,15 @@ async def listen_to_redis(websocket: WebSocket):
     finally:
         pubsub.unsubscribe("last_signal")  
         logging.info("Unsubscribed from 'last_signal' channel")
+
+async def send_to_order_endpoint(data: Payload):
+    # replace with your actual create_order endpoint
+    url = "http://your_url_here/create_order"
+    try:
+        response = await auth.session.post(url, json=data.dict())
+        response.raise_for_status()
+    except Exception as e:
+        logging.error(f"Error sending data to order endpoint: {str(e)}")
 
 def read_last_signal():
     try:
@@ -90,4 +99,4 @@ def read_last_signal():
         logging.error(f"Error reading last_signal from Redis: {str(e)}")
 
 read_last_signal()
-logging.info("Order endpoint ready")
+logging.info("Order endpoint ready") 
