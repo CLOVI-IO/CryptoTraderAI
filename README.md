@@ -4,7 +4,11 @@ CryptoTraderAI is an open-source project that aims to develop an AI-powered trad
 
 ## WARNING
 
-This is an experimental project in development to learn to build with AI in the context of trading and financial markets.
+WARNING: CryptoTraderAI is an experimental, AI-powered trading project, developed with the objective of learning and exploring AI in trading contexts. Use of this system is at your own risk. We are not responsible for any trading decisions or outcomes associated with its use. Always conduct thorough research and consult professionals before making any financial decisions.
+
+## Goal
+
+Increase user account value. Increase success of signal. Minimize risk.
 
 ## Key Objectives (The Plan)
 
@@ -17,8 +21,6 @@ This is an experimental project in development to learn to build with AI in the 
 `Risk Management`: Protecting your trading account is a top priority for CryptoTraderAI. It incorporates robust risk management strategies, including factors such as risk-reward ratio, position sizing, stop-loss levels, and diversification, to mitigate potential losses and manage risk effectively.
 
 `Continuous Learning and Improvement`: CryptoTraderAI is constantly learning and adapting to changing market conditions. It leverages historical data, market trends, and user interactions to enhance its trading strategies and algorithms, ensuring continuous improvement over time.
-
-## Goal
 
 ## Prerequisites
 
@@ -69,130 +71,7 @@ The CryptoTraderAI API provides the following endpoints:
 
 The CryptoTraderAI API work on providing the following endpoints to access its functionality:
 
-## `GET /signals`
-
-Retrieves a list of trading signals.
-
-### Parameters
-
-- `symbol` (optional): Filter signals by symbol.
-- `interval` (optional): Filter signals by interval.
-
-### Response
-
-Returns a list of trading signals in JSON format.
-
-## `POST /signals`
-
-Creates a new trading signal.
-
-### Request Body
-
-- `symbol`: Symbol of the trading signal.
-- `entry_price`: Entry price of the signal.
-- `stop_loss`: Stop-loss level for the signal.
-- `take_profit`: Take-profit level for the signal.
-
-### Response
-
-Returns the created signal in JSON format.
-
-## `GET /positions`
-
-Retrieves a list of open positions.
-
-### Parameters
-
-- `symbol` (optional): Filter positions by symbol.
-
-### Response
-
-Returns a list of open positions in JSON format.
-
-## `POST /positions`
-
-Creates a new position.
-
-### Request Body
-
-- `symbol`: Symbol of the position.
-- `entry_price`: Entry price of the position.
-- `quantity`: Quantity of the position.
-- `side`: Side of the position (BUY or SELL).
-
-### Response
-
-Returns the created position in JSON format.
-
-## `GET /orders`
-
-Retrieves a list of orders.
-
-### Parameters
-
-- `symbol` (optional): Filter orders by symbol.
-
-### Response
-
-Returns a list of orders in JSON format.
-
-## `POST /orders`
-
-Creates a new order.
-
-### Request Body
-
-- `symbol`: Symbol of the order.
-- `price`: Price of the order.
-- `quantity`: Quantity of the order.
-- `side`: Side of the order (BUY or SELL).
-- `type`: Type of the order (LIMIT, MARKET, etc.).
-
-### Response
-
-Returns the created order in JSON format.
-
-## `GET /account`
-
-Retrieves account information.
-
-### Response
-
-Returns account information in JSON format.
-
-## `GET /balances`
-
-Retrieves a list of account balances.
-
-### Response
-
-Returns a list of account balances in JSON format.
-
-## `GET /trades`
-
-Retrieves a list of executed trades.
-
-### Parameters
-
-- `symbol` (optional): Filter trades by symbol.
-
-### Response
-
-Returns a list of executed trades in JSON format.
-
-## `GET /market_data`
-
-Retrieves market data for a specific symbol.
-
-### Parameters
-
-- `symbol`: Symbol for which to retrieve market data.
-
-### Response
-
-Returns market data for the specified symbol in JSON format.
-
-For detailed information on each endpoint, including request and response formats, authentication requirements, and rate limits, please refer to the complete CryptoTraderAI API documentation.
+## TODO
 
 ## License
 

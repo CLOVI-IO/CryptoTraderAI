@@ -1,112 +1,33 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from shared_state import state  # Import the shared state
-import traceback  # import traceback module for detailed error logging
-from typing import Optional
-
-# Output json Exemple
-# {
-#     "symbol": "SOLUSDT",
-#     "close": "20.96",
-#     "volume": "256.81",
-#     "interval": "1",
-#     "strategy": "Open Long",
-#     "type": "LIMIT",
-#     "side": "BUY",
-#     "price": "20.96",
-#     "quantity": "256.81"
-# }
-
+from fastapi import APIRouter, WebSocket
+from starlette.websockets import WebSocketDisconnect
+import logging
+from models import Payload
+from redis_handler import RedisHandler
 
 router = APIRouter()
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 
-# Define the nested classes for the data model
-class Order(BaseModel):
-    action: Optional[str]
-    contracts: Optional[str]
-    price: Optional[str]
-    id: Optional[str]
-    comment: Optional[str]
-    alert_message: Optional[str]
+redis_handler = RedisHandler()  # Create RedisHandler instance
+redis_client = redis_handler.redis_client  # Access redis client from RedisHandler
 
+@router.websocket("/order")  # Change this line
+async def websocket_order(websocket: WebSocket):
+    await websocket.accept()
+    logging.info("Order: WebSocket accepted")
 
-class StrategyInfo(BaseModel):
-    position_size: Optional[str]
-    order: Order
-    market_position: Optional[str]
-    market_position_size: Optional[str]
-    prev_market_position: Optional[str]
-    prev_market_position_size: Optional[str]
-
-
-class Plots(BaseModel):
-    plot_0: Optional[str]
-    plot_1: Optional[str]
-
-
-class CurrentInfo(BaseModel):
-    fire_time: Optional[str]
-    plots: Plots
-
-
-class BarInfo(BaseModel):
-    open: Optional[str]
-    high: Optional[str]
-    low: Optional[str]
-    close: Optional[str]
-    volume: Optional[str]
-    time: Optional[str]
-
-
-class AlertInfo(BaseModel):
-    exchange: Optional[str]
-    ticker: Optional[str]
-    price: Optional[str]
-    volume: Optional[str]
-    interval: Optional[str]
-
-
-# Main Signal model
-class Signal(BaseModel):
-    alert_info: AlertInfo
-    bar_info: BarInfo
-    current_info: CurrentInfo
-    strategy_info: StrategyInfo
-
-
-# New Payload class
-class Payload(BaseModel):
-    signal: Signal
-
-
-@router.post("/order")
-def get_order(payload: Payload):
     try:
-        last_signal = payload.signal.dict()
+        while True:
+            data = await websocket.receive_text()
+            payload = Payload.parse_raw(data)
+            logging.info(f"Order: Received payload from client: {payload}")
 
-        # Based on the strategy of the signal, define the order type and side
-        order_type = "LIMIT"
-        order_side = "BUY"
-        if last_signal["strategy_info"]["order"]["action"] == "SELL":
-            order_side = "SELL"
+            # Perform necessary operations with the payload
 
-        # Format JSON output
-        formatted_output = {
-            "symbol": last_signal["alert_info"]["ticker"],
-            "close": last_signal["bar_info"]["close"],
-            "volume": last_signal["alert_info"]["volume"],
-            "interval": last_signal["alert_info"]["interval"],
-            "strategy": last_signal["strategy_info"]["order"]["action"],
-            "type": order_type,
-            "side": order_side,
-            "price": last_signal["bar_info"]["close"],
-            "quantity": last_signal["alert_info"]["volume"],
-        }
-
-        return formatted_output
-
+            await websocket.send_json({"message": "Received payload"})  # Sending acknowledgment to the client
+            logging.debug("Order: Sent acknowledgment to client")
+    except WebSocketDisconnect:
+        logging.error("Order: WebSocket disconnected.")
     except Exception as e:
-        # print the traceback of the error
-        print(f"Failed to create order. Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+        logging.error(f"Order: Unexpected error: {str(e)}")

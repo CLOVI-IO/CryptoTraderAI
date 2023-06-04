@@ -1,46 +1,50 @@
 # webhook.py
 from fastapi import APIRouter, Request, HTTPException
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import os
 import json
-from shared_state import state  # Import the shared state
+import logging
+from redis_handler import RedisHandler  # import RedisHandler
 
 router = APIRouter()
 
-load_dotenv()  # Load environment variables from .env file
+logging.basicConfig(level=logging.DEBUG)
 
+load_dotenv(find_dotenv())
 
 @router.post("/webhook")
 async def webhook(request: Request):
     client_host = request.client.host
-    print(f"Client host: {client_host}")  # Debug print
-
     tradingview_ips = os.getenv("TRADINGVIEW_IPS", "").split(",")
-    print(f"TradingView IPs: {tradingview_ips}")  # Debug print
 
     if client_host not in tradingview_ips:
         raise HTTPException(status_code=403, detail="Access denied")
 
+    redis_handler = RedisHandler()  # create RedisHandler instance
+    redis_client = redis_handler.redis_client  # access redis client from RedisHandler
+    if redis_client is None:
+        raise HTTPException(status_code=500, detail="Webhook endpoint: Failed to connect to Redis")
+
     try:
         content_type = request.headers.get("content-type", "")
-        print(f"Content type: {content_type}")  # Debug print
-
         if "application/json" in content_type:
             payload = await request.json()
         elif "text/plain" in content_type:
-            payload = await request.text()
-            payload = json.loads(payload)  # Convert text payload to JSON
+            body = await request.body()
+            payload = body.decode()
+            payload = json.loads(payload)
         else:
             raise HTTPException(status_code=415, detail="Unsupported media type")
 
-        # Process the payload or store it as required
-        state["last_signal"] = payload  # Update the shared state
-        print(f"Received signal: {state['last_signal']}")
+        # Set the payload to a key and also publish it
+        redis_client.set("last_signal", json.dumps(payload))
+        redis_client.publish("last_signal", json.dumps(payload))
+        print(f"Webhook endpoint: Set and published 'last_signal' to Redis: {json.dumps(payload)}")
 
         return {"status": "ok"}
 
     except Exception as e:
-        print(f"Failed to store signal: {e}")
+        print(f"Webhook endpoint: Failed to set and publish signal: {e}")
         raise HTTPException(
-            status_code=500, detail="An error occurred while storing the signal"
+            status_code=500, detail="Webhook endpoint: An error occurred while setting and publishing the signal"
         )
