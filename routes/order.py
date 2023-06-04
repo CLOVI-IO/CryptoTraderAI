@@ -29,30 +29,30 @@ redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDI
 @router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket):
     await websocket.accept()
-    logging.info("WebSocket accepted")
+    logging.info("Order: WebSocket accepted")
     connected_websockets.add(websocket)
 
     pubsub = redis_client.pubsub()
     pubsub.subscribe("last_signal")
-    logging.info("Subscribed to 'last_signal' channel")  
+    logging.info("Order: Subscribed to 'last_signal' channel")  
 
     try:
         while True:
             message = pubsub.get_message()
             if message and message["type"] == "message":
                 last_signal = Payload(**json.loads(message["data"]))
-                logging.info(f"Received last_signal from Redis channel: {last_signal}")  
+                logging.info(f"Order: Received last_signal from Redis channel: {last_signal}")  
                 await send_to_order_endpoint(last_signal)  # Send data to create_order endpoint
                 await websocket.send_text(json.dumps(last_signal.dict()))  # Sending as JSON string
-                logging.debug(f"Sent signal to client: {last_signal}")
+                logging.debug(f"Order: Sent signal to client: {last_signal}")
     except WebSocketDisconnect:
-        logging.error("WebSocket disconnected.")
+        logging.error("Order: WebSocket disconnected.")
         connected_websockets.remove(websocket)
     except Exception as e:
-        logging.error(f"Unexpected error: {str(e)}")
+        logging.error(f"Order: Unexpected error: {str(e)}")
     finally:
         pubsub.unsubscribe("last_signal")  
-        logging.info("Unsubscribed from 'last_signal' channel")
+        logging.info("Order: Unsubscribed from 'last_signal' channel")
 
 async def send_to_order_endpoint(data: Payload):
     # replace with your actual create_order endpoint
@@ -61,10 +61,10 @@ async def send_to_order_endpoint(data: Payload):
         response = await auth.session.post(url, json=data.dict())
         response.raise_for_status()
         if response.status_code == 200:
-            logging.debug(f"Successfully sent data to order endpoint. Response: {response.json()}")
+            logging.debug(f"Order: Successfully sent data to order endpoint. Response: {response.json()}")
         else:
-            logging.error(f"Failed to send data to order endpoint. Status code: {response.status_code}")
+            logging.error(f"Order: Failed to send data to order endpoint. Status code: {response.status_code}")
     except Exception as e:
-        logging.error(f"Error sending data to order endpoint: {str(e)}")
+        logging.error(f"Order: Error sending data to order endpoint: {str(e)}")
 
-logging.info("Order endpoint ready") 
+logging.info(":: Order endpoint ready ::") 
