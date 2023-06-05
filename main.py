@@ -1,9 +1,6 @@
 # main.py
 
 from fastapi import FastAPI
-from dotenv import load_dotenv
-import os
-import uvicorn
 
 from routes import webhook, viewsignal, order, exchange
 
