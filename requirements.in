@@ -1,0 +1,15 @@
+Flask
+requests
+python-dotenv
+fastapi
+uvicorn
+httpx
+gunicorn
+Werkzeug
+redis
+rediscluster
+pydantic
+six
+websockets
+pytest
+pytest-asyncio
