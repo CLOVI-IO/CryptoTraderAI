@@ -1,5 +1,5 @@
 import os
-import redis
+import rediscluster
 import logging
 
 
@@ -17,26 +17,31 @@ class RedisHandler:
         logging.debug(f"REDIS_PASSWORD={self.REDIS_PASSWORD}")
 
         try:
+            startup_nodes = [{"host": self.REDIS_HOST, "port": str(self.REDIS_PORT)}]
+
             # Only use the password if it's provided
             if self.REDIS_PASSWORD:
-                self.redis_client = redis.StrictRedis(
-                    host=self.REDIS_HOST,
-                    port=self.REDIS_PORT,
+                self.redis_client = rediscluster.RedisCluster(
+                    startup_nodes=startup_nodes,
+                    decode_responses=True,
+                    skip_full_coverage_check=True,
                     password=self.REDIS_PASSWORD,
                 )
             else:
-                self.redis_client = redis.StrictRedis(
-                    host=self.REDIS_HOST, port=self.REDIS_PORT
+                self.redis_client = rediscluster.RedisCluster(
+                    startup_nodes=startup_nodes,
+                    decode_responses=True,
+                    skip_full_coverage_check=True,
                 )
 
-            logging.debug("Successfully created redis.StrictRedis instance")
+            logging.debug("Successfully created rediscluster.RedisCluster instance")
 
             # Try a simple operation to check if the connection is established
             if self.redis_client.ping():
                 logging.debug("Successfully connected to Redis")
             else:
                 logging.error("Failed to connect to Redis")
-        except redis.exceptions.ConnectionError as e:
-            logging.error(f"Redis connection error: {e}")
+        except rediscluster.exceptions.ClusterDownError as e:
+            logging.error(f"Redis cluster error: {e}")
         except Exception as e:
             logging.error(f"Error: {e}")
