@@ -1,6 +1,8 @@
 # viewsignal.py
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from starlette.responses import JSONResponse
+from fastapi import responses
+
 from dotenv import load_dotenv, find_dotenv
 import os
 import json

@@ -1,7 +1,7 @@
 import os
 import redis
 import logging
-from fastapi.responses import JSONResponse
+from starlette.responses import JSONResponse
 from rediscluster import RedisCluster
 
 
