@@ -1,7 +1,7 @@
 import os
 import redis
 import logging
-from starlette.responses import JSONResponse
+from fastapi import HTTPException
 from rediscluster import RedisCluster
 
 
@@ -42,9 +42,7 @@ class RedisHandler:
                 logging.error("Failed to connect to Redis")
         except redis.exceptions.ConnectionError as e:
             logging.error(f"Redis connection error: {e}")
-            raise JSONResponse(
-                content={"detail": f"Redis connection error: {e}"}, status_code=500
-            )
+            raise HTTPException(status_code=500, detail=f"Redis connection error: {e}")
         except Exception as e:
             logging.error(f"Error: {e}")
-            raise JSONResponse(content={"detail": f"Error: {e}"}, status_code=500)
+            raise HTTPException(status_code=500, detail=f"Error: {e}")
