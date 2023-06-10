@@ -24,9 +24,14 @@ async def websocket_last_order_updates(websocket: WebSocket):
         while True:
             message = redis_handler.redis_client.get("last_order_updates")
             if message == b"updated":
-                last_order = json.loads(redis_handler.redis_client.get("last_order"))
-                if last_order:
-                    await websocket.send_text(json.dumps(last_order))
+                try:
+                    last_order = json.loads(
+                        redis_handler.redis_client.get("last_order")
+                    )
+                    if last_order:
+                        await websocket.send_text(json.dumps(last_order))
+                except Exception as e:
+                    logging.error(f"Failed to get last order in websocket: {e}")
     except WebSocket.Disconnect:
         connected_websockets.remove(websocket)
 
@@ -39,54 +44,17 @@ async def listen_for_last_order_updates():
             data = message["data"]
             if data == b"updated":  # check if the message indicates an update
                 for websocket in connected_websockets:
-                    last_order = json.loads(
-                        redis_handler.redis_client.get("last_order")
-                    )
-                    if last_order:
-                        await websocket.send_text(json.dumps(last_order))
+                    try:
+                        last_order = json.loads(
+                            redis_handler.redis_client.get("last_order")
+                        )
+                        if last_order:
+                            await websocket.send_text(json.dumps(last_order))
+                    except Exception as e:
+                        logging.error(f"Failed to get last order in listener: {e}")
 
 
 @router.get("/last_order")
 async def get_last_order(background_tasks: BackgroundTasks):
     start_time = datetime.utcnow()
     output = {}  # dictionary to hold all relevant details
-
-    last_order = redis_handler.redis_client.get("last_order")
-    if not last_order:
-        output.update(
-            {
-                "message": "No last order in Redis. Starting to listen for last order updates...",
-                "timestamp": start_time.isoformat(),
-                "latency": "N/A",
-            }
-        )
-        background_tasks.add_task(listen_for_last_order_updates)
-        return output
-
-    try:
-        last_order = json.loads(last_order)  # Parse into JSON only if not None
-        end_time = datetime.utcnow()
-        latency = (end_time - start_time).total_seconds()
-
-        output.update(
-            {
-                "message": "Successfully fetched last order",
-                "order": last_order,
-                "timestamp": end_time.isoformat(),
-                "latency": f"{latency} seconds",
-            }
-        )
-
-        return output
-
-    except Exception as e:
-        end_time = datetime.utcnow()
-        latency = (end_time - start_time).total_seconds()
-        output.update(
-            {
-                "error": f"Failed to get last order: {str(e)}",
-                "timestamp": end_time.isoformat(),
-                "latency": f"{latency} seconds",
-            }
-        )
-        return output
