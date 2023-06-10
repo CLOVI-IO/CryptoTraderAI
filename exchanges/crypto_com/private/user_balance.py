@@ -108,7 +108,7 @@ async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
                     f"Stored user balance in Redis at {datetime.utcnow().isoformat()}."
                 )
                 # Retrieve stored data for debugging purposes
-                user_balance_redis = redis_handler.redis_client.get("user_balance")
+                user_balance_redis = redis_handler.get_client().get("user_balance")
                 logging.debug(
                     f"Retrieved from Redis at {datetime.utcnow().isoformat()}: {user_balance_redis}"
                 )
