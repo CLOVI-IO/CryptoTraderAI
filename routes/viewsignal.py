@@ -1,8 +1,6 @@
 # viewsignal.py
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from starlette.responses import JSONResponse
-from fastapi import responses
-
 from dotenv import load_dotenv, find_dotenv
 import os
 import json
@@ -33,11 +31,15 @@ def view_signal():
                 f"Retrieved signal from Redis: {signal}"
             )  # replace print with logging.info
             return {"signal": signal}
+    except json.JSONDecodeError as e:
+        logging.error(
+            f"Failed to parse signal as JSON: {str(e)}"
+        )  # replace print with logging.error
+        raise HTTPException(status_code=500, detail="Failed to parse signal as JSON")
     except Exception as e:
         logging.error(
             f"Failed to retrieve signal: {str(e)}"
         )  # replace print with logging.error
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "An error occurred while retrieving the signal"},
+        raise HTTPException(
+            status_code=500, detail="An error occurred while retrieving the signal"
         )

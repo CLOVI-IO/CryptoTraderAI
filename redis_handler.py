@@ -14,7 +14,7 @@ class RedisHandler:
 
         logging.debug(f"REDIS_HOST={self.REDIS_HOST}")
         logging.debug(f"REDIS_PORT={self.REDIS_PORT}")
-        logging.debug(f"REDIS_PASSWORD={self.REDIS_PASSWORD}")
+        # logging.debug(f"REDIS_PASSWORD={self.REDIS_PASSWORD}")  # Removed for security reasons
 
     def get_client(self):
         if self.redis_client is None:
@@ -49,3 +49,11 @@ class RedisHandler:
                 logging.error(f"Error: {e}")
                 raise HTTPException(status_code=500, detail=f"Error: {e}")
         return self.redis_client
+
+
+# Example usage
+redis_handler = RedisHandler()
+redis_client = redis_handler.get_client()
+
+# Then, you can use redis_client
+# user_balance_redis = redis_client.get("user_balance")
