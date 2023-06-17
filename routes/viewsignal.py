@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 def view_signal():
     try:
         redis_handler = RedisHandler()  # create RedisHandler instance
-        r = redis_handler.get_client()  # get connected redis client from RedisHandler
+        r = redis_handler.redis_client  # get connected redis client from RedisHandler
         last_signal = r.get("last_signal")
         if last_signal is None:
             logging.info("No signal found in Redis")  # replace print with logging.info
