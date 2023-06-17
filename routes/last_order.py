@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from starlette.websockets import WebSocket
 import logging
 import json
 from datetime import datetime
@@ -10,49 +9,9 @@ router = APIRouter()
 # Setting up logging to display debug messages
 logging.basicConfig(level=logging.DEBUG)
 
-connected_websockets = []
-
-
-async def listen_for_last_order_updates(redis_client):
-    pubsub = redis_client.pubsub()  # create a pubsub instance
-    pubsub.subscribe("last_order_updates")  # subscribe to the channel
-    for message in pubsub.listen():  # listen for new messages
-        if message["type"] == "message":  # ignore other types of messages
-            data = message["data"]
-            if data == b"updated":  # check if the message indicates an update
-                for websocket in connected_websockets:
-                    try:
-                        last_order = json.loads(redis_client.get("last_order"))
-                        if last_order:
-                            await websocket.send_text(json.dumps(last_order))
-                    except Exception as e:
-                        logging.error(f"Failed to get last order in listener: {e}")
-
-
-@router.websocket("/ws/last_order_updates")
-async def websocket_last_order_updates(websocket: WebSocket):
-    await websocket.accept()
-    connected_websockets.append(websocket)
-    try:
-        redis_handler = RedisHandler()  # create RedisHandler instance
-        redis_client = (
-            redis_handler.redis_client
-        )  # get connected redis client from RedisHandler
-        while True:
-            message = redis_client.get("last_order_updates")
-            if message == b"updated":
-                try:
-                    last_order = json.loads(redis_client.get("last_order"))
-                    if last_order:
-                        await websocket.send_text(json.dumps(last_order))
-                except Exception as e:
-                    logging.error(f"Failed to get last order in websocket: {e}")
-    except WebSocket.Disconnect:
-        connected_websockets.remove(websocket)
-
 
 @router.get("/last_order")
-async def get_last_order(background_tasks: BackgroundTasks):
+async def get_last_order():
     start_time = datetime.utcnow()
     output = {}  # dictionary to hold all relevant details
 
@@ -65,12 +24,11 @@ async def get_last_order(background_tasks: BackgroundTasks):
         if not last_order:
             output.update(
                 {
-                    "message": "No last order in Redis. Starting to listen for last order updates...",
+                    "message": "No last order in Redis",
                     "timestamp": start_time.isoformat(),
                     "latency": "N/A",
                 }
             )
-            background_tasks.add_task(listen_for_last_order_updates, redis_client)
             return output
 
         try:
