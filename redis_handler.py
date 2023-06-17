@@ -7,7 +7,9 @@ from fastapi import HTTPException
 
 class RedisHandler:
     def __init__(self):
-        self.REDIS_HOST = os.getenv("REDIS_HOST")
+        self.REDIS_HOST = os.getenv(
+            "REDIS_HOST", "clustercfg.redis-cluster.5thpsv.apse1.cache.amazonaws.com"
+        )
         self.REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
         self.redis_client = None
