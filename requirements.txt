@@ -28,7 +28,7 @@ click==8.1.3
     #   flask
     #   pip-tools
     #   uvicorn
-fastapi==0.96.0
+fastapi==0.98.0
     # via -r requirements.in
 flask==2.3.2
     # via -r requirements.in
