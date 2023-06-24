@@ -7,9 +7,9 @@ import logging
 from models import Payload
 from redis_handler import RedisHandler  # Add this line
 
-app = (
-    FastAPI()
-)  # if this is your main app. Otherwise, this would be in your main app file
+# app = (
+#    FastAPI()
+# )  # if this is your main app. Otherwise, this would be in your main app file
 
 router = APIRouter()
 
