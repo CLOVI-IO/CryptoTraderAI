@@ -1,1 +1,1 @@
-web: hypercorn main:app --bind 0.0.0.0:7000
+web: uvicorn main:app --host 0.0.0.0 --port 8000
