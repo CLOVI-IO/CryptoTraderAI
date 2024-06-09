@@ -1,22 +1,30 @@
-from fastapi import APIRouter, WebSocket, FastAPI
+from fastapi import APIRouter, WebSocket, HTTPException
 from starlette.websockets import WebSocketDisconnect
+from dotenv import load_dotenv, find_dotenv
 import os
 import json
-import time
 import logging
 from models import Payload
-from redis_handler import RedisHandler  # Add this line
-
-# app = (
-#    FastAPI()
-# )  # if this is your main app. Otherwise, this would be in your main app file
+from redis_handler import RedisHandler
 
 router = APIRouter()
+
+# Load environment variables
+load_dotenv(find_dotenv())
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
-redis_handler = RedisHandler()  # Create RedisHandler instance
+# Get Redis connection details from environment variables
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+
+# Create RedisHandler instance with explicit environment variables
+redis_handler = RedisHandler(
+    host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=REDIS_DB
+)
 redis_client = redis_handler.redis_client  # Access redis client from RedisHandler
 
 connected_websockets = set()

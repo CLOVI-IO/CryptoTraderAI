@@ -1,16 +1,20 @@
-# webhook.py
+import os
 from fastapi import APIRouter, Request, HTTPException
 from dotenv import load_dotenv, find_dotenv
-import os
 import json
 import logging
-from redis_handler import RedisHandler  # import RedisHandler
+from redis_handler import RedisHandler
 
 router = APIRouter()
 
 logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv(find_dotenv())
+
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
 
 
 @router.post("/webhook")
@@ -21,8 +25,10 @@ async def webhook(request: Request):
     if client_host not in tradingview_ips:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    redis_handler = RedisHandler()  # create RedisHandler instance
-    redis_client = redis_handler.redis_client  # access redis client from RedisHandler
+    redis_handler = RedisHandler(
+        host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=REDIS_DB
+    )
+    redis_client = redis_handler.redis_client
     if redis_client is None:
         raise HTTPException(
             status_code=500, detail="Webhook endpoint: Failed to connect to Redis"
@@ -47,7 +53,6 @@ async def webhook(request: Request):
         )
 
         return {"status": "ok"}
-
     except Exception as e:
         logging.error(f"Webhook endpoint: Failed to set and publish signal: {e}")
         raise HTTPException(

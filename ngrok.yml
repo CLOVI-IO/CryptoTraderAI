@@ -1,0 +1,6 @@
+version: "2"
+authtoken: ${NGROK_AUTHTOKEN}
+tunnels:
+  default:
+    proto: http
+    addr: 8000

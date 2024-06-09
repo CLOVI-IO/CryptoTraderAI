@@ -1,5 +1,5 @@
-# main.py
-from fastapi import FastAPI, WebSocket, BackgroundTasks
+import os
+from fastapi import FastAPI, Request, Response
 from routes import webhook, viewsignal, order, exchange, last_order
 from exchanges.crypto_com.private import user_balance
 from exchanges.crypto_com.public import auth
@@ -7,14 +7,41 @@ from models import Payload
 from redis_handler import RedisHandler
 import json
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
+
+
+# Middleware to add ngrok-skip-browser-warning header
+@app.middleware("http")
+async def add_ngrok_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["ngrok-skip-browser-warning"] = "true"
+    return response
+
 
 # Initialize last_signal in the application state
 app.state.last_signal = None
 
+# Get Redis connection details from environment variables
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+
+# Log the environment variables being used
+logging.info(f"REDIS_HOST: {REDIS_HOST}")
+logging.info(f"REDIS_PORT: {REDIS_PORT}")
+logging.info(f"REDIS_PASSWORD: {'******' if REDIS_PASSWORD else 'None'}")
+logging.info(f"REDIS_DB: {REDIS_DB}")
+
 # Create RedisHandler instance and subscribe to the Redis channel 'last_signal'
-redis_handler = RedisHandler()
+redis_handler = RedisHandler(
+    host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=REDIS_DB
+)
 redis_client = redis_handler.redis_client
 pubsub = redis_client.pubsub()
 pubsub.subscribe("last_signal")
@@ -47,3 +74,8 @@ app.include_router(order.router)
 app.include_router(last_order.router)
 app.include_router(exchange.router)
 app.include_router(user_balance.router)
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
