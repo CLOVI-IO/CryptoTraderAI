@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException
-from starlette.responses import JSONResponse
 from dotenv import load_dotenv, find_dotenv
 import os
 import json
@@ -12,7 +11,7 @@ load_dotenv(find_dotenv())
 router = APIRouter()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 # Get Redis connection details from environment variables
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
@@ -30,13 +29,24 @@ def view_signal():
         )
         r = redis_handler.redis_client  # get connected redis client from RedisHandler
         last_signal = r.get("last_signal")
+
+        # Log the raw last_signal from Redis
+        logging.info(f"Raw last_signal from Redis: {last_signal}")
+
         if last_signal is None:
             logging.info("No signal found in Redis")
             return {"signal": "No signal"}
-        else:
-            signal = json.loads(last_signal)  # Convert JSON string to Python object
-            logging.info(f"Retrieved signal from Redis: {signal}")
-            return {"signal": signal}
+
+        # Decode bytes to string if necessary
+        if isinstance(last_signal, bytes):
+            last_signal = last_signal.decode("utf-8")
+
+        logging.info(f"Decoded last_signal: {last_signal}")
+
+        signal = json.loads(last_signal)  # Convert JSON string to Python object
+        logging.info(f"Retrieved signal from Redis: {signal}")
+        return {"signal": signal}
+
     except json.JSONDecodeError as e:
         logging.error(f"Failed to parse signal as JSON: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to parse signal as JSON")

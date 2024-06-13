@@ -1,6 +1,7 @@
-version: "2"
-authtoken: ${NGROK_AUTHTOKEN}
+authtoken: 2NxiMpUgHkgynru1i92COXmyrfk_6UR2tNg9rKyGc4cuJTww3
+version: 2
 tunnels:
-  default:
+  cryptotraderai:
     proto: http
     addr: 8000
+    hostname: cryptotraderai.ngrok.app

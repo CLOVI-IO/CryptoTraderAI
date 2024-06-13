@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI, Request, Response
+import asyncio
+from fastapi import FastAPI, Request
 from routes import webhook, viewsignal, order, exchange, last_order
 from exchanges.crypto_com.private import user_balance
 from exchanges.crypto_com.public import auth
@@ -11,6 +12,9 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
@@ -51,14 +55,21 @@ logging.info("Order: Subscribed to 'last_signal' channel")
 # Add a task that runs in the background after startup
 @app.on_event("startup")
 async def startup_event():
-    while True:
-        message = pubsub.get_message()
-        if message and message["type"] == "message":
-            last_signal = Payload(**json.loads(message["data"]))
-            logging.info(
-                f"Order: Received last_signal from Redis channel: {last_signal}"
-            )
-            app.state.last_signal = last_signal  # update last_signal in the app state
+    async def listen_to_redis():
+        while True:
+            message = pubsub.get_message()
+            if message and message["type"] == "message":
+                last_signal = Payload(**json.loads(message["data"]))
+                logging.info(
+                    f"Order: Received last_signal from Redis channel: {last_signal}"
+                )
+                app.state.last_signal = (
+                    last_signal  # update last_signal in the app state
+                )
+            await asyncio.sleep(0.1)
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(listen_to_redis())
 
 
 @app.get("/")
@@ -78,4 +89,5 @@ app.include_router(user_balance.router)
 if __name__ == "__main__":
     import uvicorn
 
+    logging.info("Starting Uvicorn server...")
     uvicorn.run(app, host="0.0.0.0", port=8000)

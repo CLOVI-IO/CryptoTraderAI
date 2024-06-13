@@ -1,14 +1,12 @@
 import asyncio
 from fastapi import APIRouter
 from fastapi.responses import EventSourceResponse
-from fastapi import FastAPI
 from dotenv import load_dotenv, find_dotenv
 import os
 import json
 import redis
 import logging
 
-app = FastAPI()
 router = APIRouter()
 
 # Load environment variables
@@ -37,35 +35,32 @@ redis_client = connect_to_redis()
 
 
 async def listen_to_redis(send):
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe("last_signal")
+    logging.info("Subscribed to 'last_signal' channel")
+
     while True:
-        try:
-            pubsub = redis_client.pubsub()
-            pubsub.subscribe("last_signal")
-            logging.info("Subscribed to 'last_signal' channel")
-
-            while True:
-                try:
-                    message = pubsub.get_message()
-                    if message and message["type"] == "message":
-                        last_signal = json.loads(message["data"])
-                        logging.info(
-                            f"Received last_signal from Redis channel: {last_signal}"
-                        )
-                        await send(
-                            {"data": f"Received signal from Redis: {last_signal}"}
-                        )
-                except Exception as e:
-                    logging.error(f"Error in listen_to_redis: {e}")
-                    break
-        except Exception as e:
-            logging.error(f"Error connecting to Redis: {e}")
-            logging.info("Attempting to reconnect in 5 seconds...")
-            await asyncio.sleep(5)
+        message = pubsub.get_message()
+        if message and message["type"] == "message":
+            last_signal = json.loads(message["data"])
+            logging.info(f"Received last_signal from Redis channel: {last_signal}")
+            await send({"data": f"Received signal from Redis: {last_signal}"})
+        await asyncio.sleep(0.01)
 
 
-@app.get("/last_signal_sub")
+@router.get("/last_signal_sub")
 async def last_signal_sub():
-    async def event_generator(send):
-        await listen_to_redis(send)
+    async def event_generator():
+        loop = asyncio.get_event_loop()
+        queue = asyncio.Queue()
 
-    return EventSourceResponse(event_generator)
+        async def send(event):
+            await queue.put(event)
+
+        loop.create_task(listen_to_redis(send))
+
+        while True:
+            event = await queue.get()
+            yield event
+
+    return EventSourceResponse(event_generator())

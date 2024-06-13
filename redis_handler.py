@@ -16,6 +16,9 @@ class RedisHandler:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
+        ch = logging.StreamHandler()
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
 
         # Log the Redis connection details
         self.logger.info("Connecting to Redis:")
@@ -31,10 +34,14 @@ class RedisHandler:
                 port=self.REDIS_PORT,
                 password=self.REDIS_PASSWORD,
                 db=self.REDIS_DB,
+                decode_responses=True,  # Ensure responses are decoded as strings
             )
         else:
             self.redis_client = redis.StrictRedis(
-                host=self.REDIS_HOST, port=self.REDIS_PORT, db=self.REDIS_DB
+                host=self.REDIS_HOST,
+                port=self.REDIS_PORT,
+                db=self.REDIS_DB,
+                decode_responses=True,
             )
 
         # Log the Redis client instance
@@ -50,9 +57,12 @@ class RedisHandler:
             self.logger.exception(e)
 
         # Set logging for Redis commands
-        self.redis_client.set_response_callback("SET", self.log_response)
-        self.redis_client.set_response_callback("GET", self.log_response)
-        # Add other Redis commands as needed
+        self.redis_client.set_response_callback("SET", self.log_response("SET"))
+        self.redis_client.set_response_callback("GET", self.log_response("GET"))
 
-    def log_response(self, command, response):
-        self.logger.info(f"Redis command: {command}, Response: {response}")
+    def log_response(self, command):
+        def wrapper(response):
+            self.logger.info(f"Redis command: {command}, Response: {response}")
+            return response  # Ensure the response is returned
+
+        return wrapper

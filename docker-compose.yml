@@ -3,13 +3,9 @@ services:
   cryptotraderai:
     build: .
     ports:
-      - "8000:8000"
-    environment:
-      - API_BASE_URL=http://localhost:8000
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
+      - "8000:8000" # Map the container's port 8000 to the host's port 8000
+    env_file:
+      - .env
     depends_on:
       - redis
 
@@ -18,13 +14,8 @@ services:
     ports:
       - "6379:6379"
 
-  ngrok:
-    image: ngrok/ngrok:latest
-    command: "http cryptotraderai:8000 --domain=inviting-wolf-comic.ngrok-free.app"
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    depends_on:
-      - cryptotraderai
-    network_mode: "host"
-    env_file:
-      - .env
+  #ngrok:
+  #  image: ngrok/ngrok:latest
+  #  command: ngrok http 8000 --hostname=cryptotraderai.ngrok.app --authtoken=2NxiMpUgHkgynru1i92COXmyrfk_6UR2tNg9rKyGc4cuJTww3
+  #  depends_on:
+  #    - cryptotraderai
