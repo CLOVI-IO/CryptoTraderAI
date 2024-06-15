@@ -52,3 +52,5 @@ Thumbs.db
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+docker-compose.yml
+ngrok.yml

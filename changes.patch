@@ -1,0 +1,38 @@
+diff --git a/.gitignore b/.gitignore
+index adb2850..5e68e08 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -52,3 +52,5 @@ Thumbs.db
+ .elasticbeanstalk/*
+ !.elasticbeanstalk/*.cfg.yml
+ !.elasticbeanstalk/*.global.yml
++docker-compose.yml
++ngrok.yml
+\ No newline at end of file
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 0c55974..5e50283 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -13,9 +13,3 @@ services:
+     image: redis:latest
+     ports:
+       - "6379:6379"
+-
+-  #ngrok:
+-  #  image: ngrok/ngrok:latest
+-  #  command: ngrok http 8000 --hostname=cryptotraderai.ngrok.app --authtoken=2NxiMpUgHkgynru1i92COXmyrfk_6UR2tNg9rKyGc4cuJTww3
+-  #  depends_on:
+-  #    - cryptotraderai
+diff --git a/ngrok.yml b/ngrok.yml
+deleted file mode 100644
+index 77eba90..0000000
+--- a/ngrok.yml
++++ /dev/null
+@@ -1,7 +0,0 @@
+-authtoken: 2NxiMpUgHkgynru1i92COXmyrfk_6UR2tNg9rKyGc4cuJTww3
+-version: 2
+-tunnels:
+-  cryptotraderai:
+-    proto: http
+-    addr: 8000
+-    hostname: cryptotraderai.ngrok.app

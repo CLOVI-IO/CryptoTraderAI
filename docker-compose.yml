@@ -13,9 +13,3 @@ services:
     image: redis:latest
     ports:
       - "6379:6379"
-
-  #ngrok:
-  #  image: ngrok/ngrok:latest
-  #  command: ngrok http 8000 --hostname=cryptotraderai.ngrok.app --authtoken=2NxiMpUgHkgynru1i92COXmyrfk_6UR2tNg9rKyGc4cuJTww3
-  #  depends_on:
-  #    - cryptotraderai
