@@ -23,7 +23,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 connected_websockets = set()
 
-
 @router.websocket("/ws/user_balance")
 async def websocket_user_balance(websocket: WebSocket):
     await websocket.accept()
@@ -33,7 +32,6 @@ async def websocket_user_balance(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
-
 
 async def send_user_balance_request():
     method = "private/user-balance"
@@ -50,7 +48,6 @@ async def send_user_balance_request():
     logging.info(f"Sending request at {datetime.utcnow().isoformat()}: {request}")
     await auth.send_request(method, request["params"])
     return id, request
-
 
 async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
     # Authenticate when required
@@ -140,7 +137,6 @@ async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
     raise UserBalanceException(
         "Failed to receive the expected response after all attempts"
     )
-
 
 @router.get("/user_balance")
 async def get_user_balance(background_tasks: BackgroundTasks):
