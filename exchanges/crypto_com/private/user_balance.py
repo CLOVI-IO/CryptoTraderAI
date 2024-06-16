@@ -59,6 +59,7 @@ async def fetch_user_balance(retries=3, delay=5, max_recv_attempts=3):
     while retries > 0:
         try:
             request_id, request = await send_user_balance_request()
+            logging.debug(f"Request sent: {request}")
             break  # If request sent successfully, break the loop
         except Exception as e:
             if retries == 1:
