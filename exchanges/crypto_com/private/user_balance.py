@@ -112,26 +112,32 @@ async def fetch_user_balance(auth: Authentication, retries=3, delay=5, max_recv_
             continue  # Ignore the heartbeat message and keep waiting for the actual response
 
         if "id" in response and response["id"] == request_id:
-            if "code" in response and response["code"] == 0:
-                # Store user balance in Redis
-                redis_handler.redis_client.set("user_balance", json.dumps(response))
-                logging.info(f"Stored user balance in Redis at {datetime.now(timezone.utc).isoformat()}.")
-                # Retrieve stored data for debugging purposes
-                user_balance_redis = redis_handler.redis_client.get("user_balance")
-                logging.debug(f"Retrieved from Redis at {datetime.now(timezone.utc).isoformat()}: {user_balance_redis}")
-                end_time = datetime.now(timezone.utc)
-                latency = (end_time - start_time).total_seconds()
-                return {
-                    "message": "Successfully fetched user balance",
-                    "balance": response["result"]["data"],
-                    "timestamp": start_time.isoformat(),
-                    "latency": f"{latency} seconds",
-                }
-            else:
-                end_time = datetime.now(timezone.utc)
-                latency = (end_time - start_time).total_seconds()
-                logging.error(f"Response code error. Expected code: 0, Actual code: {response.get('code')}, Full Response: {response}, Latency: {latency}s")
-                raise UserBalanceException("Response code error")
+            if "code" in response:
+                if response["code"] == 0:
+                    # Store user balance in Redis
+                    redis_handler.redis_client.set("user_balance", json.dumps(response))
+                    logging.info(f"Stored user balance in Redis at {datetime.now(timezone.utc).isoformat()}.")
+                    # Retrieve stored data for debugging purposes
+                    user_balance_redis = redis_handler.redis_client.get("user_balance")
+                    logging.debug(f"Retrieved from Redis at {datetime.now(timezone.utc).isoformat()}: {user_balance_redis}")
+                    end_time = datetime.now(timezone.utc)
+                    latency = (end_time - start_time).total_seconds()
+                    return {
+                        "message": "Successfully fetched user balance",
+                        "balance": response["result"]["data"],
+                        "timestamp": start_time.isoformat(),
+                        "latency": f"{latency} seconds",
+                    }
+                else:
+                    end_time = datetime.now(timezone.utc)
+                    latency = (end_time - start_time).total_seconds()
+                    if response["code"] == 10002:  # Unauthorized error code
+                        logging.error(f"Unauthorized access. Error code: {response['code']}, Full Response: {response}, Latency: {latency}s")
+                        await auth.authenticate()  # Re-authenticate
+                        request_id, request = await send_user_balance_request(auth)  # Resend request
+                        continue
+                    logging.error(f"Response code error. Expected code: 0, Actual code: {response['code']}, Full Response: {response}, Latency: {latency}s")
+                    raise UserBalanceException("Response code error")
         logging.error(f"Response id does not match request id. Request id: {request_id}, Request: {request}, Response: {response}")
         # If it reached here, it means that the response id did not match the request id, which is an error
         raise UserBalanceException("Response id does not match request id")
