@@ -1,13 +1,11 @@
-# user_balance.py
-
-from fastapi import APIRouter, WebSocket, BackgroundTasks, HTTPException, Depends
+from fastapi import APIRouter, WebSocket, BackgroundTasks, Depends, HTTPException
 import asyncio
 import time
 import json
 import logging
 import websockets
 from datetime import datetime, timezone
-from exchanges.crypto_com.public.auth import get_auth, Authentication  # Import Authentication class
+from exchanges.crypto_com.public.auth import get_auth, Authentication
 from redis_handler import RedisHandler
 from custom_exceptions import UserBalanceException
 from starlette.websockets import WebSocketDisconnect
@@ -29,9 +27,7 @@ connected_websockets = set()
 
 @router.websocket("/ws/user_balance")
 async def websocket_user_balance(websocket: WebSocket):
-    """
-    WebSocket endpoint to manage user balance connections.
-    """
+    """WebSocket endpoint for user balance"""
     await websocket.accept()
     connected_websockets.add(websocket)
     try:
@@ -41,9 +37,7 @@ async def websocket_user_balance(websocket: WebSocket):
         connected_websockets.remove(websocket)
 
 async def send_user_balance_request(auth):
-    """
-    Sends a user balance request to the WebSocket API.
-    """
+    """Send user balance request via WebSocket"""
     method = "private/user-balance"
     nonce = str(int(time.time() * 1000))
     id = int(nonce)
@@ -60,67 +54,64 @@ async def send_user_balance_request(auth):
     return id, request
 
 async def fetch_user_balance(auth: Authentication, retries=3, delay=5, max_recv_attempts=5, recv_timeout=30):
-    """
-    Fetches user balance with retries and error handling.
-    """
-    # Authenticate if not already authenticated
+    """Fetch user balance with retries and error handling"""
     if not auth.authenticated:
         logging.info("Authenticating...")
         await auth.authenticate()
 
     start_time = datetime.now(timezone.utc)
-    while retries > 0:
+    attempt = 0
+    request_id = None
+    while attempt < retries:
         try:
             request_id, request = await send_user_balance_request(auth)
-            break  # If request sent successfully, break the loop
+            break
         except Exception as e:
-            if retries == 1:
+            if attempt == retries - 1:
                 end_time = datetime.now(timezone.utc)
                 latency = (end_time - start_time).total_seconds()
                 logging.error(f"Error occurred. Latency: {latency}s. Exception: {str(e)}")
-                raise e  # Re-raise the exception after all attempts exhausted
-            retries -= 1
-            await asyncio.sleep(delay)  # Wait before next attempt
+                raise e
+            attempt += 1
+            await asyncio.sleep(delay)
 
     recv_attempts = 0
+    response = None
     while recv_attempts < max_recv_attempts:
         recv_attempts += 1
         try:
             response = await asyncio.wait_for(auth.websocket.recv(), timeout=recv_timeout)
+            response = json.loads(response)
         except asyncio.TimeoutError:
             logging.error("Timeout error while waiting for response.")
             raise UserBalanceException("Timeout error while waiting for response")
         except websockets.exceptions.ConnectionClosedOK:
-            logging.warning("WebSocket connection closed, attempting to reconnect...")
-            await auth.connect()  # Reconnect
-            request_id, request = await send_user_balance_request(auth)  # Resend request
-            continue
+            logging.info("WebSocket connection closed after receiving valid response.")
+            break
         except Exception as e:
             logging.error(f"Error while receiving response: {str(e)}")
             raise UserBalanceException(f"Error while receiving response: {str(e)}")
 
-        try:
-            response = json.loads(response)
-        except json.JSONDecodeError:
-            logging.error(f"Invalid JSON response: {response}")
-            raise UserBalanceException("Invalid JSON response")
-
         logging.debug(f"Received response at {datetime.now(timezone.utc).isoformat()}: {response}")
 
         if "method" in response and response["method"] == "public/heartbeat":
-            logging.info("Received heartbeat, continuing to wait for actual response.")
-            continue  # Ignore the heartbeat message and keep waiting for the actual response
+            logging.info("Received heartbeat, ignoring.")
+            continue
 
         if "id" in response and response["id"] == request_id:
             if "code" in response and response["code"] == 0:
-                # Store user balance in Redis
                 redis_handler.redis_client.set("user_balance", json.dumps(response))
                 logging.info(f"Stored user balance in Redis at {datetime.now(timezone.utc).isoformat()}.")
-                # Retrieve stored data for debugging purposes
                 user_balance_redis = redis_handler.redis_client.get("user_balance")
                 logging.debug(f"Retrieved from Redis at {datetime.now(timezone.utc).isoformat()}: {user_balance_redis}")
                 end_time = datetime.now(timezone.utc)
                 latency = (end_time - start_time).total_seconds()
+
+                # Close the WebSocket connection after successfully receiving the response
+                await auth.websocket.close()
+                logging.info("WebSocket connection closed after receiving valid response.")
+
+                # Return the balance
                 return {
                     "message": "Successfully fetched user balance",
                     "balance": response["result"]["data"],
@@ -132,24 +123,20 @@ async def fetch_user_balance(auth: Authentication, retries=3, delay=5, max_recv_
                 latency = (end_time - start_time).total_seconds()
                 logging.error(f"Response code error. Expected code: 0, Actual code: {response.get('code')}, Full Response: {response}, Latency: {latency}s")
                 raise UserBalanceException("Response code error")
-        logging.error(f"Response id does not match request id. Request id: {request_id}, Request: {request}, Response: {response}")
-        # If it reached here, it means that the response id did not match the request id, which is an error
-        raise UserBalanceException("Response id does not match request id")
 
-    logging.error(f"Failed to receive the expected response after {recv_attempts} attempts. The last response: {response}")
-    # If it reached here, it means that the expected response was not received after all attempts
+    if response:
+        logging.error(f"Failed to receive the expected response after {recv_attempts} attempts. The last response: {response}")
     raise UserBalanceException("Failed to receive the expected response after all attempts")
 
 @router.get("/user_balance")
 async def get_user_balance(background_tasks: BackgroundTasks, auth: Authentication = Depends(get_auth)):
-    """
-    Endpoint to fetch user balance.
-    """
+    """Get user balance and store in Redis if not already cached"""
     start_time = datetime.now(timezone.utc)
     user_balance_redis = redis_handler.redis_client.get("user_balance")
     end_time = datetime.now(timezone.utc)
     latency = (end_time - start_time).total_seconds()
     if user_balance_redis is None:
+        logging.info("No cached user balance found. Starting background task to fetch user balance.")
         background_tasks.add_task(fetch_user_balance, auth)
         return {
             "message": "Started fetching user balance",
@@ -157,6 +144,8 @@ async def get_user_balance(background_tasks: BackgroundTasks, auth: Authenticati
             "latency": f"{latency} seconds",
         }
     else:
+        logging.info("User balance found in Redis.")
+        logging.debug(f"User balance from Redis: {user_balance_redis}")
         return {
             "message": "Successfully fetched user balance",
             "balance": json.loads(user_balance_redis),
