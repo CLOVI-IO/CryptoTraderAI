@@ -12,20 +12,26 @@ from redis_handler import RedisHandler
 from custom_exceptions import UserBalanceException
 from starlette.websockets import WebSocketDisconnect
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
 # Create an instance of RedisHandler
 redis_handler = RedisHandler()
 
 # Get the singleton instance of the Authentication class.
 auth = Depends(get_auth)
 
+# Define the FastAPI router
 router = APIRouter()
 
-logging.basicConfig(level=logging.DEBUG)
-
+# Set of connected WebSockets
 connected_websockets = set()
 
 @router.websocket("/ws/user_balance")
 async def websocket_user_balance(websocket: WebSocket):
+    """
+    WebSocket endpoint to manage user balance connections.
+    """
     await websocket.accept()
     connected_websockets.add(websocket)
     try:
@@ -35,6 +41,9 @@ async def websocket_user_balance(websocket: WebSocket):
         connected_websockets.remove(websocket)
 
 async def send_user_balance_request(auth):
+    """
+    Sends a user balance request to the WebSocket API.
+    """
     method = "private/user-balance"
     nonce = str(int(time.time() * 1000))
     id = int(nonce)
@@ -51,7 +60,10 @@ async def send_user_balance_request(auth):
     return id, request
 
 async def fetch_user_balance(auth: Authentication, retries=3, delay=5, max_recv_attempts=5, recv_timeout=30):
-    # Authenticate when required
+    """
+    Fetches user balance with retries and error handling.
+    """
+    # Authenticate if not already authenticated
     if not auth.authenticated:
         logging.info("Authenticating...")
         await auth.authenticate()
@@ -130,6 +142,9 @@ async def fetch_user_balance(auth: Authentication, retries=3, delay=5, max_recv_
 
 @router.get("/user_balance")
 async def get_user_balance(background_tasks: BackgroundTasks, auth: Authentication = Depends(get_auth)):
+    """
+    Endpoint to fetch user balance.
+    """
     start_time = datetime.now(timezone.utc)
     user_balance_redis = redis_handler.redis_client.get("user_balance")
     end_time = datetime.now(timezone.utc)
