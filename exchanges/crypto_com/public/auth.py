@@ -53,12 +53,12 @@ class Authentication:
         else:
             uri = os.getenv("SANDBOX_USER_API_WEBSOCKET")
 
-        logging.debug("Trying to connect to %s", uri)
+        logging.debug(f"Trying to connect to {uri}")
         self.status = f"Trying to connect to {uri}"
 
         try:
             self.websocket = await websockets.connect(uri)
-            logging.debug("Successfully connected to %s", uri)
+            logging.debug(f"Successfully connected to {uri}")
             self.status = f"Successfully connected to {uri}"
         except Exception as e:
             logging.error(f"Failed to establish connection: {e}")
@@ -134,6 +134,7 @@ class Authentication:
                         if response["code"] == 0:
                             self.authenticated = True
                             self.result = {"message": "Authenticated successfully"}
+                            logging.info("Authentication successful")
                             return self.result
                         else:
                             self.authenticated = False
@@ -147,7 +148,8 @@ class Authentication:
                         self.status = "No 'code' field in the response"
                         break
 
-        raise AuthenticationError
+        logging.error("Authentication failed after retries")
+        raise AuthenticationError("Authentication failed after retries")
 
     async def send_request(self, method, params=None):
         if params is None:
@@ -165,6 +167,7 @@ class Authentication:
             "nonce": nonce,
         }
 
+        logging.debug(f"Sending request: {request}")
         await self.websocket.send(json.dumps(request))
 
         while True:
@@ -174,12 +177,15 @@ class Authentication:
                 raise AuthenticationError("Connection closed before receiving response")
 
             response = json.loads(response)
+            logging.debug(f"Received response: {response}")
 
             # If it's a heartbeat message, ignore it and wait for the next message
             if response.get("method") == "public/heartbeat":
+                logging.debug("Received heartbeat message, ignoring")
                 continue
 
             if "id" in response and response["id"] == id:
+                logging.debug(f"Received valid response for request id {id}")
                 return response
 
         raise AuthenticationError("Failed to receive response")
