@@ -1,16 +1,14 @@
-# user_balance_ws.py
-
-from fastapi import APIRouter, WebSocket, BackgroundTasks, Depends, HTTPException
 import asyncio
 import time
 import json
 import logging
 import websockets
 from datetime import datetime, timezone
-from exchanges.crypto_com.public.auth import get_auth, Authentication
+from fastapi import APIRouter, WebSocket, BackgroundTasks, Depends, HTTPException
 from redis_handler import RedisHandler
 from custom_exceptions import UserBalanceException
 from starlette.websockets import WebSocketDisconnect
+from exchanges.crypto_com.public.auth import get_auth, Authentication
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -161,8 +159,9 @@ async def keep_websocket_alive(auth: Authentication):
 # Background task to maintain WebSocket connection
 @router.on_event("startup")
 async def startup_event():
-    auth = await get_auth()
+    auth = get_auth()
     asyncio.create_task(keep_websocket_alive(auth))
+    asyncio.create_task(fetch_user_balance(auth))  # This should be called as a task
 
 @router.on_event("shutdown")
 async def shutdown_event():

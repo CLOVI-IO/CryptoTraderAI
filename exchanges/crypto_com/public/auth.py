@@ -1,5 +1,3 @@
-# auth.py
-
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 import websockets.exceptions
 import logging
@@ -20,11 +18,9 @@ router = APIRouter()
 # Setting up logging to display debug messages
 logging.basicConfig(level=logging.DEBUG)
 
-
 class AuthenticationError(Exception):
     """Custom exception for authentication errors."""
     pass
-
 
 class Authentication:
     """Singleton class to handle WebSocket authentication with the Crypto.com API."""
@@ -186,11 +182,9 @@ class Authentication:
 
         raise AuthenticationError("Failed to receive response")
 
-
 def get_auth() -> Authentication:
     """Dependency function to get the singleton instance of Authentication."""
     return Authentication.getInstance()
-
 
 @router.get("/auth")
 async def auth_endpoint(
@@ -199,7 +193,6 @@ async def auth_endpoint(
     """Endpoint to start the authentication process."""
     background_tasks.add_task(auth.authenticate)
     return {"message": "Authentication started"}
-
 
 @router.get("/auth/status")
 async def auth_status(auth: Authentication = Depends(get_auth)):
