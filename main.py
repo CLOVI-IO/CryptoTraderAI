@@ -2,8 +2,8 @@ import os
 import asyncio
 from fastapi import FastAPI, Request
 from routes import webhook, viewsignal, order, exchange, last_order
-from exchanges.crypto_com.private import user_balance
-from exchanges.crypto_com.public import auth
+from exchanges.crypto_com.private import user_balance_ws
+from exchanges.crypto_com.public.auth import get_auth, Authentication
 from models import Payload
 from redis_handler import RedisHandler
 import json
@@ -68,8 +68,13 @@ async def startup_event():
                 )
             await asyncio.sleep(0.1)
 
+    async def start_user_balance_subscription():
+        auth = get_auth()
+        await user_balance_ws.fetch_user_balance(auth)
+
     loop = asyncio.get_event_loop()
     loop.create_task(listen_to_redis())
+    loop.create_task(start_user_balance_subscription())
 
 
 @app.get("/")
@@ -78,13 +83,12 @@ def hello_world():
 
 
 # Include the route endpoints from other files
-app.include_router(auth.router)
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)
 app.include_router(order.router)
 app.include_router(last_order.router)
 app.include_router(exchange.router)
-app.include_router(user_balance.router)
+
 
 if __name__ == "__main__":
     import uvicorn
