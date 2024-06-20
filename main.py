@@ -1,9 +1,9 @@
 import os
 import asyncio
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from routes import webhook, viewsignal, order, exchange, last_order
-from exchanges.crypto_com.private import user_balance
-from exchanges.crypto_com.public import auth
+from exchanges.crypto_com.private import user_balance_ws
+from exchanges.crypto_com.public.auth import get_auth
 from models import Payload
 from redis_handler import RedisHandler
 import json
@@ -17,15 +17,6 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-
-
-# Middleware to add ngrok-skip-browser-warning header
-@app.middleware("http")
-async def add_ngrok_header(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["ngrok-skip-browser-warning"] = "true"
-    return response
-
 
 # Initialize last_signal in the application state
 app.state.last_signal = None
@@ -49,8 +40,7 @@ redis_handler = RedisHandler(
 redis_client = redis_handler.redis_client
 pubsub = redis_client.pubsub()
 pubsub.subscribe("last_signal")
-logging.info("Order: Subscribed to 'last_signal' channel")
-
+logging.info("Subscribed to 'last_signal' channel")
 
 # Add a task that runs in the background after startup
 @app.on_event("startup")
@@ -61,30 +51,25 @@ async def startup_event():
             if message and message["type"] == "message":
                 last_signal = Payload(**json.loads(message["data"]))
                 logging.info(
-                    f"Order: Received last_signal from Redis channel: {last_signal}"
+                    f"Received last_signal from Redis channel: {last_signal}"
                 )
-                app.state.last_signal = (
-                    last_signal  # update last_signal in the app state
-                )
+                app.state.last_signal = last_signal  # update last_signal in the app state
             await asyncio.sleep(0.1)
+
+    async def start_user_balance_subscription():
+        auth = get_auth()
+        asyncio.create_task(user_balance_ws.fetch_user_balance(auth))
 
     loop = asyncio.get_event_loop()
     loop.create_task(listen_to_redis())
-
-
-@app.get("/")
-def hello_world():
-    return {"message": "Hello, World!"}
-
+    loop.create_task(start_user_balance_subscription())
 
 # Include the route endpoints from other files
-app.include_router(auth.router)
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)
 app.include_router(order.router)
 app.include_router(last_order.router)
 app.include_router(exchange.router)
-app.include_router(user_balance.router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -24,11 +24,14 @@ async def fetch_order_quantity(ref_price):
     user_balance = json.loads(user_balance_data)
 
     # Parse accounts and find USD balance
-    usd_balance = None
-    for account in user_balance["result"]["accounts"]:
-        if account["currency"] == "USD":
-            usd_balance = account
-            break
+    usd_balance = next(
+        (
+            account
+            for account in user_balance["result"]["accounts"]
+            if account["currency"] == "USD"
+        ),
+        None,
+    )
 
     if not usd_balance:
         raise HTTPException(

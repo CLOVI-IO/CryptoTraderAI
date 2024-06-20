@@ -52,7 +52,11 @@ Thumbs.db
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+<<<<<<< HEAD
 docker-compose.yml
 ngrok.ymlvenv/
 venv/
 venv/
+=======
+requirements.in
+>>>>>>> dev
