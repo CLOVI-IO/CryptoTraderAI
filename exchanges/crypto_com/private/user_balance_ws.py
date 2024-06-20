@@ -93,6 +93,9 @@ async def handle_user_balance_updates(auth: Authentication):
                 continue
 
             logging.debug(f"Received non-heartbeat and non-user.balance message: {response}")
+        except websockets.ConnectionClosed as e:
+            logging.error(f"WebSocket connection closed: {e}")
+            break
         except Exception as e:
             logging.error(f"Error during WebSocket handling: {e}")
             break
