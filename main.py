@@ -2,19 +2,18 @@ import os
 import asyncio
 from fastapi import FastAPI
 from routes import webhook, viewsignal, order, exchange, last_order
-from exchanges.crypto_com.private import user_balance_ws
-from exchanges.crypto_com.public.auth import get_auth
 from models import Payload
 from redis_handler import RedisHandler
 import json
 import logging
 from dotenv import load_dotenv
+from exchanges.crypto_com.private.user_balance_ws import start_user_balance_subscription  # Ensure correct import
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 app = FastAPI()
 
@@ -33,36 +32,37 @@ logging.info(f"REDIS_PORT: {REDIS_PORT}")
 logging.info(f"REDIS_PASSWORD: {'******' if REDIS_PASSWORD else 'None'}")
 logging.info(f"REDIS_DB: {REDIS_DB}")
 
-# Create RedisHandler instance and subscribe to the Redis channel 'last_signal'
+# Create RedisHandler instance and subscribe to the Redis channel 'last_signal' and 'user_balance'
 redis_handler = RedisHandler(
     host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=REDIS_DB
 )
 redis_client = redis_handler.redis_client
 pubsub = redis_client.pubsub()
-pubsub.subscribe("last_signal")
-logging.info("Subscribed to 'last_signal' channel")
+pubsub.subscribe("last_signal", "user_balance")
+logging.info("Subscribed to 'last_signal' and 'user_balance' channels")
 
-# Add a task that runs in the background after startup
+async def listen_to_redis():
+    while True:
+        message = pubsub.get_message()
+        if message and message["type"] == "message":
+            channel = message["channel"].decode("utf-8") if isinstance(message["channel"], bytes) else message["channel"]
+            data = message["data"].decode("utf-8") if isinstance(message["data"], bytes) else message["data"]
+            logging.info(f"Received message from {channel}: {data}")
+            if channel == "last_signal":
+                last_signal = Payload(**json.loads(data))
+                logging.info(f"Processed last_signal: {last_signal}")
+                app.state.last_signal = last_signal  # update last_signal in the app state
+            elif channel == "user_balance":
+                user_balance = json.loads(data)
+                logging.info(f"Processed user_balance: {user_balance}")
+                # Process user balance as needed
+        await asyncio.sleep(0.1)
+
 @app.on_event("startup")
 async def startup_event():
-    async def listen_to_redis():
-        while True:
-            message = pubsub.get_message()
-            if message and message["type"] == "message":
-                last_signal = Payload(**json.loads(message["data"]))
-                logging.info(
-                    f"Received last_signal from Redis channel: {last_signal}"
-                )
-                app.state.last_signal = last_signal  # update last_signal in the app state
-            await asyncio.sleep(0.1)
-
-    async def start_user_balance_subscription():
-        auth = get_auth()
-        asyncio.create_task(user_balance_ws.fetch_user_balance(auth))
-
     loop = asyncio.get_event_loop()
     loop.create_task(listen_to_redis())
-    loop.create_task(start_user_balance_subscription())
+    loop.create_task(start_user_balance_subscription(redis_handler))  # Pass redis_handler to start_user_balance_subscription
 
 # Include the route endpoints from other files
 app.include_router(webhook.router)

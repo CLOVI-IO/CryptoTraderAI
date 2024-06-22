@@ -4,7 +4,7 @@ import json
 import logging
 import websockets
 from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, BackgroundTasks, Depends
+from fastapi import APIRouter, WebSocket
 from redis_handler import RedisHandler
 from custom_exceptions import UserBalanceException
 from starlette.websockets import WebSocketDisconnect
@@ -80,10 +80,14 @@ async def handle_user_balance_updates(auth: Authentication):
                 
                 if current_user_balance != last_user_balance:
                     last_user_balance = current_user_balance
-                    redis_handler.redis_client.set("user_balance", json.dumps(response))
-                    logging.info(f"Stored user balance in Redis at {datetime.now(timezone.utc).isoformat()}.")
-                    user_balance_redis = redis_handler.redis_client.get("user_balance")
-                    logging.debug(f"Retrieved from Redis at {datetime.now(timezone.utc).isoformat()}: {user_balance_redis}")
+                    try:
+                        balance_data = json.dumps(response)
+                        redis_handler.redis_client.set("user_balance", balance_data)
+                        logging.info(f"Stored user balance in Redis at {datetime.now(timezone.utc).isoformat()}: {balance_data}")
+                        user_balance_redis = redis_handler.redis_client.get("user_balance")
+                        logging.debug(f"Retrieved from Redis at {datetime.now(timezone.utc).isoformat()}: {user_balance_redis}")
+                    except Exception as e:
+                        logging.error(f"Failed to write to Redis: {e}")
 
                     # Notify connected WebSocket clients
                     for ws in connected_websockets:
@@ -122,13 +126,7 @@ async def fetch_user_balance(auth: Authentication, retries=3, delay=5):
     logging.error(f"Failed to receive the expected response after {retries} attempts.")
     raise UserBalanceException("Failed to receive the expected response after all attempts")
 
-# Background task to maintain WebSocket connection
-@router.on_event("startup")
-async def startup_event():
+# Function to start user balance subscription
+async def start_user_balance_subscription(redis_handler: RedisHandler):
     auth = get_auth()
-    asyncio.create_task(fetch_user_balance(auth))
-
-@router.on_event("shutdown")
-async def shutdown_event():
-    for ws in connected_websockets:
-        await ws.close()
+    await fetch_user_balance(auth)

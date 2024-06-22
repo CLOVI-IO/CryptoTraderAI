@@ -1,7 +1,5 @@
-import os
 import redis
 import logging
-
 
 class RedisHandler:
     def __init__(self, host="redis", port=6379, password=None, db=0):
@@ -10,22 +8,8 @@ class RedisHandler:
         self.REDIS_DB = db
         self.REDIS_PASSWORD = password
 
-        # Initialize logging
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        ch = logging.StreamHandler()
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
-
-        # Log the Redis connection details
-        self.logger.info("Connecting to Redis:")
-        self.logger.info(f"Host: {self.REDIS_HOST}")
-        self.logger.info(f"Port: {self.REDIS_PORT}")
-        self.logger.info(f"DB: {self.REDIS_DB}")
-        self.logger.info(f"Password: {'******' if self.REDIS_PASSWORD else 'None'}")
+        # Use a named logger
+        self.logger = logging.getLogger("RedisHandler")
 
         # Only use the password if it's provided
         if self.REDIS_PASSWORD:
@@ -44,8 +28,11 @@ class RedisHandler:
                 decode_responses=True,
             )
 
-        # Log the Redis client instance
-        self.logger.info(f"Redis client: {self.redis_client}")
+        self.logger.info("Connecting to Redis:")
+        self.logger.info(f"Host: {self.REDIS_HOST}")
+        self.logger.info(f"Port: {self.REDIS_PORT}")
+        self.logger.info(f"DB: {self.REDIS_DB}")
+        self.logger.info(f"Password: {'******' if self.REDIS_PASSWORD else 'None'}")
 
         # Test the Redis connection
         try:
@@ -56,13 +43,22 @@ class RedisHandler:
             self.logger.error("Failed to connect to Redis!")
             self.logger.exception(e)
 
-        # Set logging for Redis commands
-        self.redis_client.set_response_callback("SET", self.log_response("SET"))
-        self.redis_client.set_response_callback("GET", self.log_response("GET"))
+    def set(self, key, value):
+        self.logger.info(f"Setting key {key} to Redis with value {value}")
+        try:
+            self.redis_client.set(key, value)
+            self.logger.info(f"Successfully set key {key}")
+        except Exception as e:
+            self.logger.error(f"Failed to set key {key} to Redis")
+            self.logger.exception(e)
 
-    def log_response(self, command):
-        def wrapper(response):
-            self.logger.info(f"Redis command: {command}, Response: {response}")
-            return response  # Ensure the response is returned
-
-        return wrapper
+    def get(self, key):
+        self.logger.info(f"Getting key {key} from Redis")
+        try:
+            value = self.redis_client.get(key)
+            self.logger.info(f"Successfully got key {key} with value {value}")
+            return value
+        except Exception as e:
+            self.logger.error(f"Failed to get key {key} from Redis")
+            self.logger.exception(e)
+            return None
