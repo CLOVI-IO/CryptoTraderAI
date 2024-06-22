@@ -1,0 +1,26 @@
+{
+  "id": "{timestamp}",
+  "method": "private/create-order",
+  "params": {
+    "instrument_name": "{instrument_name}",
+    "side": "{side}",
+    "type": "{order_type}",
+    "quantity": "{quantity}",
+    "client_oid": "order_{timestamp}"
+  },
+  "trigger": {
+    "price": "{trigger_price}",
+    "callback_rate": "{callback_rate}",
+    "distance": "{distance}"
+  },
+  "risk_management": {
+    "take_profit": {
+      "price": "{take_profit_price}",
+      "quantity": "{quantity}"
+    },
+    "stop_loss": {
+      "price": "{stop_loss_price}",
+      "quantity": "{quantity}"
+    }
+  }
+}
