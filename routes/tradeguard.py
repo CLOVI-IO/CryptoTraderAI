@@ -1,5 +1,3 @@
-# tradeguard.py
-
 from fastapi import APIRouter, HTTPException
 import os
 import json
@@ -60,7 +58,25 @@ async def get_order_quantity(ref_price: float):
     latency = end_time - start_time  # Calculate the difference, which is the latency
     print(f"Endpoint latency: {latency} seconds")  # Print the latency
 
+    # Construct the order payload
+    order_payload = {
+        "instrument_name": "BTCUSD-PERP",  # Example instrument
+        "side": "BUY",  # Example side
+        "type": "LIMIT",  # Example type
+        "price": ref_price,
+        "quantity": quantity,
+        "trigger_price": ref_price * 0.95,  # Example trigger price
+        "callback_rate": 5,  # Example callback rate
+        "distance": 0.02,  # Example distance
+        "take_profit_price": ref_price * 1.05,  # Example take profit price
+        "stop_loss_price": ref_price * 0.90  # Example stop loss price
+    }
+
+    # Publish the order to Redis
+    redis_handler.redis_client.publish("last_order", json.dumps(order_payload))
+
     return {
         "quantity": quantity,
         "latency": latency,
-    }  # Return the latency along with the quantity
+        "order_payload": order_payload
+    }
