@@ -12,9 +12,11 @@ router = APIRouter()
 redis_handler = RedisHandler()
 TRADE_PERCENTAGE = float(os.getenv("TRADE_PERCENTAGE", 5))
 
+logging.basicConfig(level=logging.DEBUG)
+
 
 async def fetch_order_quantity(ref_price):
-    user_balance_data = redis_handler.redis_client.get("user_balance")
+    user_balance_data = redis_handler.get("user_balance")
     if not user_balance_data:
         logging.error("User balance not found in Redis.")
         return 0.0
@@ -112,12 +114,10 @@ async def subscribe_to_last_signal():
                         },
                     }
 
-                    # Publish the order to Redis
-                    result = redis_handler.redis_client.publish(
-                        "last_order", json.dumps(order_payload)
-                    )
+                    # Store the order in Redis
+                    redis_handler.set("last_order", json.dumps(order_payload))
                     logging.info(
-                        f"Tradeguard: Published order to 'last_order': {order_payload}, Result: {result}"
+                        f"Tradeguard: Stored order in 'last_order': {order_payload}"
                     )
 
                 except KeyError as e:

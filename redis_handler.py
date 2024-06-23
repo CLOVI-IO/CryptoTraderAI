@@ -1,6 +1,7 @@
 import redis
 import logging
 
+
 class RedisHandler:
     def __init__(self, host="redis", port=6379, password=None, db=0):
         self.REDIS_HOST = host
@@ -60,5 +61,16 @@ class RedisHandler:
             return value
         except Exception as e:
             self.logger.error(f"Failed to get key {key} from Redis")
+            self.logger.exception(e)
+            return None
+
+    def publish(self, channel, message):
+        self.logger.info(f"Publishing message to channel {channel}: {message}")
+        try:
+            result = self.redis_client.publish(channel, message)
+            self.logger.info(f"Successfully published message to channel {channel}")
+            return result
+        except Exception as e:
+            self.logger.error(f"Failed to publish message to channel {channel}")
             self.logger.exception(e)
             return None

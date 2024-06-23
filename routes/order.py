@@ -29,9 +29,6 @@ redis_client = redis_handler.redis_client  # Access redis client from RedisHandl
 
 connected_websockets = set()
 
-# Load the order template
-with open('templates/order_template.json') as f:
-    order_template = json.load(f)
 
 @router.websocket("/ws/order")
 async def websocket_order(websocket: WebSocket):
@@ -48,42 +45,23 @@ async def websocket_order(websocket: WebSocket):
             message = pubsub.get_message()
             if message and message["type"] == "message":
                 last_order = json.loads(message["data"])
-                logging.info(f"Order: Received last_order from Redis channel: {last_order}")
+                logging.info(
+                    f"Order: Received last_order from Redis channel: {last_order}"
+                )
 
-                # Create the order using the template
-                order = order_template.copy()
-                timestamp = int(datetime.now().timestamp() * 1000)
-                order["id"] = timestamp
-                order["params"]["instrument_name"] = last_order["instrument_name"]
-                order["params"]["side"] = last_order["side"]
-                order["params"]["type"] = last_order["type"]
-                order["params"]["price"] = last_order["price"]
-                order["params"]["quantity"] = last_order["quantity"]
-                order["params"]["client_oid"] = f"order_{timestamp}"
-                order["trigger"]["price"] = last_order["trigger_price"]
-                order["trigger"]["callback_rate"] = last_order["callback_rate"]
-                order["trigger"]["distance"] = last_order["distance"]
-                order["risk_management"]["take_profit"]["price"] = last_order["take_profit_price"]
-                order["risk_management"]["take_profit"]["quantity"] = last_order["quantity"]
-                order["risk_management"]["stop_loss"]["price"] = last_order["stop_loss_price"]
-                order["risk_management"]["stop_loss"]["quantity"] = last_order["quantity"]
-
-                # Log the order history to Redis
-                redis_client.lpush("order_history", json.dumps(order))
-                logging.info(f"Order: Logged order history to Redis: {order}")
-
-                # Send the order to crypto_com exchange
-                debug_mode = os.getenv("DEBUG_MODE", "False").lower() == "true"
-                if not debug_mode:
-                    await websocket.send_json(order)
-                    logging.info(f"Order: Sent order to crypto_com: {order}")
-                else:
-                    logging.info(f"Order: TEST_ORDER - Not sent to crypto_com: {order}")
+                # Log the order details
+                logging.info(f"Order ready to be sent: {last_order}")
 
                 # Notify connected WebSocket clients
                 for ws in connected_websockets:
-                    await ws.send_json(order)
-                    logging.debug(f"Order: Sent order to client: {order}")
+                    await ws.send_json(last_order)
+                    logging.debug(f"Order: Sent order to client: {last_order}")
+
+                # Here you would send the order to the crypto_com API
+                # For now, we are just logging the order
+                # Uncomment and implement the send order logic when ready
+                # await send_order_to_crypto_com(last_order)
+
     except WebSocketDisconnect:
         logging.error("Order: WebSocket disconnected.")
         connected_websockets.remove(websocket)
@@ -93,4 +71,11 @@ async def websocket_order(websocket: WebSocket):
         pubsub.unsubscribe("last_order")
         logging.info("Order: Unsubscribed from 'last_order' channel")
 
+
 logging.info(":: Order endpoint ready ::")
+
+
+# Placeholder function for sending order to crypto_com
+async def send_order_to_crypto_com(order):
+    # Implement the logic for sending order to the crypto_com API
+    pass
