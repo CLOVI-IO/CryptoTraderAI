@@ -2,8 +2,9 @@ import os
 import asyncio
 import json
 from fastapi import FastAPI
-from routes import webhook, viewsignal, order, exchange, last_order, tradeguard
-from exchanges.crypto_com.private import user_balance_ws
+from routes import webhook, viewsignal, order, exchange, last_order
+from routes.tradeguard import subscribe_to_last_order
+from exchanges.crypto_com.private.user_balance_ws import start_user_balance_subscription
 from redis_handler import RedisHandler
 import logging
 from dotenv import load_dotenv
@@ -38,14 +39,17 @@ app.include_router(viewsignal.router)
 app.include_router(order.router)
 app.include_router(last_order.router)
 app.include_router(exchange.router)
-app.include_router(tradeguard.router)
 
 
 @app.on_event("startup")
 async def startup_event():
-
     loop = asyncio.get_event_loop()
-    loop.create_task(user_balance_ws.start_user_balance_subscription(redis_handler))
+    loop.create_task(
+        subscribe_to_last_order(redis_handler)
+    )  # Pass the RedisHandler instance
+    loop.create_task(
+        start_user_balance_subscription(redis_handler)
+    )  # Pass the RedisHandler instance
 
 
 if __name__ == "__main__":

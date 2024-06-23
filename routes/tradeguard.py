@@ -1,7 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 import os
 import json
-import time
 import logging
 import asyncio
 import traceback
@@ -14,35 +13,25 @@ TRADE_PERCENTAGE = float(os.getenv("TRADE_PERCENTAGE", 5))
 
 
 async def fetch_order_quantity(ref_price):
-    # Fetch updated user balance from Redis
     user_balance_data = redis_handler.redis_client.get("user_balance")
     if not user_balance_data:
         logging.error("User balance not found in Redis.")
-        # Default to zero or raise a specific custom exception instead
         return 0.0
 
     user_balance = json.loads(user_balance_data)
 
-    # Parse accounts and find USD balance
     usd_balance = next(
-        (
-            account
-            for account in user_balance["result"]["accounts"]
-            if account["currency"] == "USD"
-        ),
+        (account for account in user_balance if account["currency"] == "USD"),
         None,
     )
 
     if not usd_balance:
         logging.error(f"USD not found in user balance. Balance: {user_balance}")
-        # Default to zero or raise a specific custom exception instead
         return 0.0
 
-    # Calculating the amount available for trading
     amount_available_to_trade = (TRADE_PERCENTAGE / 100) * float(
         usd_balance["available"]
     )
-    # Calculating order quantity
     order_quantity = amount_available_to_trade / float(ref_price)
 
     return order_quantity
@@ -130,17 +119,3 @@ async def subscribe_to_last_order(redis_handler: RedisHandler):
     except Exception as e:
         logging.error(f"Tradeguard: Unexpected error in subscription loop: {str(e)}")
         logging.error(traceback.format_exc())
-
-
-# If you don't use the endpoint for order quantity, you can remove it as requested.
-# @router.get("/order_quantity/{ref_price}")
-# async def get_order_quantity(ref_price: float):
-#     start_time = time.time()  # Save the start time
-
-#     quantity = await fetch_order_quantity(ref_price)
-
-#     end_time = time.time()  # Save the end time
-#     latency = end_time - start_time  # Calculate the difference, which is the latency
-#     print(f"Endpoint latency: {latency} seconds")  # Print the latency
-
-#     return {"quantity": quantity, "latency": latency}
