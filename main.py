@@ -27,6 +27,7 @@ redis_handler = RedisHandler(
 
 app.state.last_signal = None
 
+# Include routers
 app.include_router(webhook.router)
 app.include_router(viewsignal.router)
 app.include_router(order.router)
@@ -43,24 +44,27 @@ async def listen_to_redis():
     while True:
         message = pubsub.get_message()
         if message and message["type"] == "message":
-            channel = (
-                message["channel"].decode("utf-8")
-                if isinstance(message["channel"], bytes)
-                else message["channel"]
-            )
-            data = (
-                message["data"].decode("utf-8")
-                if isinstance(message["data"], bytes)
-                else message["data"]
-            )
-            logging.info(f"Received message from {channel}: {data}")
-            if channel == "last_signal":
-                last_signal = json.loads(data)
-                logging.info(f"Processed last_signal: {last_signal}")
-                app.state.last_signal = last_signal
-            elif channel == "user_balance":
-                user_balance = json.loads(data)
-                logging.info(f"Processed user_balance: {user_balance}")
+            try:
+                channel = (
+                    message["channel"].decode("utf-8")
+                    if isinstance(message["channel"], bytes)
+                    else message["channel"]
+                )
+                data = (
+                    message["data"].decode("utf-8")
+                    if isinstance(message["data"], bytes)
+                    else message["data"]
+                )
+                logging.info(f"Received message from {channel}: {data}")
+                if channel == "last_signal":
+                    last_signal = json.loads(data)
+                    logging.info(f"Processed last_signal: {last_signal}")
+                    app.state.last_signal = last_signal
+                elif channel == "user_balance":
+                    user_balance = json.loads(data)
+                    logging.info(f"Processed user_balance: {user_balance}")
+            except Exception as e:
+                logging.error(f"Error processing Redis message: {e}")
         await asyncio.sleep(0.1)
 
 
