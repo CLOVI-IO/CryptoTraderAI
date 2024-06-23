@@ -1,10 +1,9 @@
-from fastapi import APIRouter, WebSocket, HTTPException
-from starlette.websockets import WebSocketDisconnect
-from dotenv import load_dotenv, find_dotenv
 import os
 import json
 import logging
-from models import Payload
+from fastapi import APIRouter, WebSocket, HTTPException
+from starlette.websockets import WebSocketDisconnect
+from dotenv import load_dotenv, find_dotenv
 from redis_handler import RedisHandler
 from datetime import datetime
 
@@ -21,7 +20,6 @@ REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
-DEBUG_MODE = os.getenv("DEBUG_MODE", "ON").upper() == "ON"
 
 # Create RedisHandler instance with explicit environment variables
 redis_handler = RedisHandler(
@@ -70,17 +68,17 @@ async def websocket_order(websocket: WebSocket):
                 order["risk_management"]["stop_loss"]["price"] = last_order["stop_loss_price"]
                 order["risk_management"]["stop_loss"]["quantity"] = last_order["quantity"]
 
-                if DEBUG_MODE:
-                    order["method"] = "TEST_ORDER"
-                    logging.info(f"Order: Debug mode is ON. Order will not be sent to crypto_com: {order}")
-                else:
-                    # Send the order via WebSocket to crypto_com exchange
-                    await websocket.send_json(order)
-                    logging.info(f"Order: Sent order to crypto_com: {order}")
-
                 # Log the order history to Redis
                 redis_client.lpush("order_history", json.dumps(order))
                 logging.info(f"Order: Logged order history to Redis: {order}")
+
+                # Send the order to crypto_com exchange
+                debug_mode = os.getenv("DEBUG_MODE", "False").lower() == "true"
+                if not debug_mode:
+                    await websocket.send_json(order)
+                    logging.info(f"Order: Sent order to crypto_com: {order}")
+                else:
+                    logging.info(f"Order: TEST_ORDER - Not sent to crypto_com: {order}")
 
                 # Notify connected WebSocket clients
                 for ws in connected_websockets:

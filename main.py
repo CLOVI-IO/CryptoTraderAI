@@ -8,6 +8,7 @@ import json
 import logging
 from dotenv import load_dotenv
 from exchanges.crypto_com.private.user_balance_ws import start_user_balance_subscription  # Ensure correct import
+from routes.tradeguard import subscribe_to_last_order
 
 # Load environment variables from .env file
 load_dotenv()
@@ -63,6 +64,7 @@ async def startup_event():
     loop = asyncio.get_event_loop()
     loop.create_task(listen_to_redis())
     loop.create_task(start_user_balance_subscription(redis_handler))  # Pass redis_handler to start_user_balance_subscription
+    loop.create_task(subscribe_to_last_order(redis_handler))  # Ensure tradeguard subscription to last_order
 
 # Include the route endpoints from other files
 app.include_router(webhook.router)
