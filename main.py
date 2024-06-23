@@ -43,8 +43,6 @@ app.include_router(tradeguard.router)
 
 @app.on_event("startup")
 async def startup_event():
-    # Start the user balance test
-    user_balance_test_main()
 
     loop = asyncio.get_event_loop()
     loop.create_task(user_balance_ws.start_user_balance_subscription(redis_handler))
