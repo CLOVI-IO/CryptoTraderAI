@@ -1,9 +1,10 @@
-from fastapi import APIRouter
 import os
 import json
 import logging
 import asyncio
 import traceback
+import time
+from fastapi import APIRouter
 from redis_handler import RedisHandler
 from models import Signal, AlertInfo, BarInfo, CurrentInfo, StrategyInfo, Order
 
@@ -37,7 +38,7 @@ async def fetch_order_quantity(ref_price):
     return order_quantity
 
 
-async def subscribe_to_last_order(redis_handler: RedisHandler):
+async def subscribe_to_last_signal():
     pubsub = redis_handler.redis_client.pubsub()
     pubsub.subscribe("last_signal")
     logging.info("Tradeguard: Subscribed to 'last_signal' channel")
@@ -84,24 +85,39 @@ async def subscribe_to_last_order(redis_handler: RedisHandler):
 
                     # Create the order using the template
                     order_payload = {
-                        "instrument_name": ticker,
-                        "side": action,
-                        "type": "LIMIT",  # Assuming a limit order; adjust as needed
-                        "price": price,
-                        "quantity": quantity,
-                        "trigger_price": price * 0.95,  # Example trigger price
-                        "callback_rate": 5,  # Example callback rate
-                        "distance": 0.02,  # Example distance
-                        "take_profit_price": price * 1.05,  # Example take profit price
-                        "stop_loss_price": price * 0.90,  # Example stop loss price
+                        "id": 1,  # Replace with appropriate ID generation logic
+                        "nonce": int(time.time() * 1000),
+                        "method": "private/create-order",
+                        "params": {
+                            "instrument_name": ticker,
+                            "side": action,
+                            "type": "STOP_LIMIT",
+                            "price": str(price),
+                            "quantity": str(quantity),
+                            "ref_price": str(price * 0.95),  # Example trigger price
+                            "ref_price_type": "LAST_PRICE",
+                            "client_oid": "unique-client-order-id",  # Unique client order ID
+                            "exec_inst": ["TRAILING"],
+                            "time_in_force": "GOOD_TILL_CANCEL",
+                            "trigger_price": str(
+                                price * 0.95
+                            ),  # Same as ref_price for triggering stop
+                            "callback_rate": 5,  # Example callback rate
+                            "take_profit_price": str(
+                                price * 1.05
+                            ),  # Example take profit price
+                            "stop_loss_price": str(
+                                price * 0.90
+                            ),  # Example stop loss price
+                        },
                     }
 
                     # Publish the order to Redis
-                    redis_handler.redis_client.publish(
+                    result = redis_handler.redis_client.publish(
                         "last_order", json.dumps(order_payload)
                     )
                     logging.info(
-                        f"Tradeguard: Published order to 'last_order': {order_payload}"
+                        f"Tradeguard: Published order to 'last_order': {order_payload}, Result: {result}"
                     )
 
                 except KeyError as e:
