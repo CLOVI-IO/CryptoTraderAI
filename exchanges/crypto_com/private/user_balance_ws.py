@@ -2,16 +2,14 @@ import asyncio
 import json
 import logging
 import time
-import websockets
 from datetime import datetime, timezone
 from redis_handler import RedisHandler
-from exchanges.crypto_com.public.auth import get_auth
+from workers.websocket_manager import WebSocketManager
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("user_balance_ws")
 
 
-async def send_user_balance_subscription_request(auth):
+async def send_user_balance_subscription_request(manager):
     """Send user balance subscription request via WebSocket"""
     method = "subscribe"
     nonce = str(int(time.time() * 1000))
@@ -24,18 +22,18 @@ async def send_user_balance_subscription_request(auth):
         "nonce": nonce,
     }
 
-    logging.info(
+    logger.info(
         f"Sending subscription request at {datetime.now(timezone.utc).isoformat()}: {request}"
     )
-    await auth.websocket.send(json.dumps(request))
+    await manager.send_request(method, params)
 
 
-async def handle_user_balance_updates(auth, redis_handler):
+async def handle_user_balance_updates(manager, redis_handler):
     """Handle user balance updates received via WebSocket"""
     while True:
         try:
-            response = await auth.websocket.recv()
-            logging.debug(f"Received WebSocket message: {response}")
+            response = await manager.websocket.recv()
+            logger.debug(f"Received WebSocket message: {response}")
             response_data = json.loads(response)
 
             if (
@@ -43,39 +41,35 @@ async def handle_user_balance_updates(auth, redis_handler):
                 and response_data.get("result")
                 and response_data["result"].get("subscription") == "user.balance"
             ):
-                logging.info(f"User balance update received: {response_data}")
+                logger.info(f"User balance update received: {response_data}")
                 balance_data = json.dumps(response_data["result"]["data"])
                 redis_handler.set("user_balance", balance_data)
-                logging.info(f"User balance data written to Redis: {balance_data}")
+                logger.info(f"User balance data written to Redis: {balance_data}")
             elif response_data.get("method") == "public/heartbeat":
                 # Handle heartbeat messages to keep the connection alive
                 heartbeat_id = response_data["id"]
-                await auth.websocket.send(
-                    json.dumps(
-                        {"id": heartbeat_id, "method": "public/respond-heartbeat"}
-                    )
-                )
-                logging.info(f"Sent heartbeat response for id {heartbeat_id}.")
+                await manager.respond_heartbeat(heartbeat_id)
+                logger.info(f"Sent heartbeat response for id {heartbeat_id}.")
             else:
-                logging.debug(f"Non-user.balance message received: {response_data}")
+                logger.debug(f"Non-user.balance message received: {response_data}")
 
         except websockets.ConnectionClosed as e:
-            logging.error(f"WebSocket connection closed: {e}")
+            logger.error(f"WebSocket connection closed: {e}")
             break
         except Exception as e:
-            logging.error(f"Error in WebSocket handling: {e}")
+            logger.error(f"Error in WebSocket handling: {e}")
             break
 
 
 async def start_user_balance_subscription(redis_handler):
+    manager = WebSocketManager()
     while True:
         try:
-            auth = get_auth()
-            await auth.connect()
-            await auth.authenticate()
-            await send_user_balance_subscription_request(auth)
-            await handle_user_balance_updates(auth, redis_handler)
+            await manager.connect()
+            await manager.authenticate()
+            await send_user_balance_subscription_request(manager)
+            await handle_user_balance_updates(manager, redis_handler)
         except Exception as e:
-            logging.error(f"Error in WebSocket connection: {e}")
-            logging.info("Reconnecting in 5 seconds...")
+            logger.error(f"Error in WebSocket connection: {e}")
+            logger.info("Reconnecting in 5 seconds...")
             await asyncio.sleep(5)

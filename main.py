@@ -7,6 +7,7 @@ from redis_handler import RedisHandler
 import logging
 from dotenv import load_dotenv
 import json
+from workers.websocket_manager import WebSocketManager
 
 load_dotenv()
 
@@ -74,6 +75,10 @@ async def startup_event():
     loop.create_task(listen_to_redis())
     loop.create_task(user_balance_ws.start_user_balance_subscription(redis_handler))
     loop.create_task(tradeguard.subscribe_to_last_signal())
+
+    # Start WebSocketManager for handling Crypto.com API WebSocket
+    websocket_manager = WebSocketManager()
+    loop.create_task(websocket_manager.run(["user.order"]))
 
 
 if __name__ == "__main__":
